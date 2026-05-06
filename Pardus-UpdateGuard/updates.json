@@ -1,0 +1,17 @@
+[
+    {
+        "name": "linux-image-amd64",
+        "section": "kernel",
+        "version": "6.1.0"
+    },
+    {
+        "name": "firefox-esr",
+        "section": "web",
+        "version": "128.0"
+    },
+    {
+        "name": "libc6",
+        "section": "libs",
+        "version": "2.36"
+    }
+]
