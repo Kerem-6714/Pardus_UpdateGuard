@@ -34,6 +34,10 @@ def analyze_with_ai():
         response.raise_for_status()
         print("\n--- 🛡️ GÜVENLİK ANALİZ RAPORU ---")
         print(response.json()['response'])
+        # Raporu bir metin dosyasına kaydet
+        with open("ai_report.txt", "w", encoding="utf-8") as f:
+            f.write(response.json()['response'])
+        print("\n✅ Analiz raporu 'ai_report.txt' dosyasına kaydedildi.")
     except Exception as e:
         print(f"❌ AI motoruyla iletişim kurulamadı: {e}")
 
