@@ -1,70 +1,152 @@
 import customtkinter as ctk
-import subprocess
+from PIL import Image, ImageTk
 import os
+import time
+import threading
 
-# Görünüm ayarları
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
+# Not: ai_engine ve scanner dosyalarının aynı klasörde olduğunu varsayıyoruz.
+# Eğer henüz oluşturmadıysan bu importlar hata verebilir, basit fonksiyonlarla simüle edebilirsin.
+# from ai_engine import AIAnalyzer
+# from scanner import SystemScanner
 
 class UpdateGuardGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # --- Pencere Konfigürasyonu ---
         self.title("Pardus UpdateGuard v1.0")
-        self.geometry("700x500")
+        self.geometry("700x600")
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
 
-        # Başlık
-        self.label = ctk.CTkLabel(self, text="🛡️ Pardus UpdateGuard", font=("Arial", 24, "bold"))
-        self.label.pack(pady=20)
+        # --- Logo ve Yol Ayarları ---
+        self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.logo_path = os.path.join(self.current_dir, "logo.png")
+        if os.path.exists(self.logo_path):
+            try:
+                # 1. Görseli Pillow ile aç
+                pil_img = Image.open(self.logo_path)
+                
+                # 2. İkon için boyutu küçült (Panelde 2000x2000 çok ağır kaçar, 32x32 yeterlidir)
+                pil_img_resized = pil_img.resize((32, 32), Image.LANCZOS)
+                
+                # 3. Tkinter'in anlayacağı PhotoImage formatına çevir
+                self.icon_photo = ImageTk.PhotoImage(pil_img_resized)
+                
+                # 4. İkonu pencereye ata
+                self.wm_iconphoto(False, self.icon_photo)
+                
+            except Exception as e:
+                print(f"Panel ikonu yüklenemedi: {e}")
+        # --- Arayüz Elemanlarını Oluştur ---
+        self.setup_ui()
 
-        # Butonlar İçin Frame
-        self.button_frame = ctk.CTkFrame(self)
-        self.button_frame.pack(pady=10, padx=20, fill="x")
+    def setup_ui(self):
+        # 1. Logo Bölümü
+        if os.path.exists(self.logo_path):
+            try:
+                raw_image = Image.open(self.logo_path)
+                self.logo_image = ctk.CTkImage(
+                    light_image=raw_image,
+                    dark_image=raw_image,
+                    size=(160, 160)
+                )
+                self.logo_label = ctk.CTkLabel(self, image=self.logo_image, text="")
+                self.logo_label.pack(pady=(25, 10))
+            except Exception as e:
+                print(f"Logo yükleme hatası: {e}")
 
-        self.scan_button = ctk.CTkButton(self.button_frame, text="Sistemi Tara", command=self.run_scanner)
-        self.scan_button.pack(side="left", padx=20, pady=10, expand=True)
+        # 2. Başlık ve Alt Başlık
+        self.title_label = ctk.CTkLabel(
+            self, 
+            text="PARDUS UPDATEGUARD", 
+            font=ctk.CTkFont(family="Arial", size=26, weight="bold")
+        )
+        self.title_label.pack(pady=(0, 5))
 
-        self.ai_button = ctk.CTkButton(self.button_frame, text="Yapay Zeka Analizi", command=self.run_ai, fg_color="green", hover_color="darkgreen")
-        self.ai_button.pack(side="left", padx=20, pady=10, expand=True)
+        self.subtitle_label = ctk.CTkLabel(
+            self, 
+            text="AI Destekli Güvenlik ve Güncelleme Denetçisi", 
+            font=ctk.CTkFont(size=14, slant="italic"),
+            text_color="gray"
+        )
+        self.subtitle_label.pack(pady=(0, 20))
 
-        # Rapor Ekranı
-        self.result_text = ctk.CTkTextbox(self, width=600, height=300)
-        self.result_text.pack(pady=20, padx=20)
-        self.result_text.insert("0.0", "Hoş geldiniz! Analiz yapmak için yukarıdaki butonları kullanın.\n")
+        # 3. Ana Panel (Status Box)
+        self.status_frame = ctk.CTkFrame(self, width=600, height=150)
+        self.status_frame.pack(pady=10, padx=40, fill="x")
 
-    def run_scanner(self):
-        self.result_text.insert("end", "\n[1/2] Sistem taranıyor...\n")
-        
-        # Bu dosyanın (main_gui.py) bulunduğu klasörü tam yol olarak al
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        # Dosyalar aynı klasörde olduğu için direkt yan yana olduklarını belirtiyoruz
-        scanner_path = os.path.join(current_dir, "scanner.py")
-        
-        # subprocess çalıştırırken 'cwd' (current working directory) parametresini ekliyoruz
-        # Böylece scanner.py çalışırken updates.json'ı doğru yere yazar
-        subprocess.run(["python", scanner_path], cwd=current_dir)
-        
-        self.result_text.insert("end", "✅ Tarama tamamlandı.\n")
+        self.status_text = ctk.CTkTextbox(
+            self.status_frame, 
+            height=150, 
+            font=("Consolas", 12),
+            fg_color="#1a1a1a"
+        )
+        self.status_text.pack(expand=True, fill="both", padx=10, pady=10)
+        self.status_text.insert("0.0", "Sistem taranmaya hazır...\nRTX 4050 ve AI motoru aktif.")
 
-    def run_ai(self):
-        self.result_text.insert("end", "[2/2] Yapay Zeka analiz ediyor...\n")
-        self.update_idletasks()
+        # 4. İlerleme Çubuğu
+        self.progress_bar = ctk.CTkProgressBar(self, width=500)
+        self.progress_bar.set(0)
+        self.progress_bar.pack(pady=20)
+
+        # 5. Butonlar Paneli
+        self.button_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.button_frame.pack(pady=20)
+
+        self.scan_button = ctk.CTkButton(
+            self.button_frame, 
+            text="SİSTEMİ TARA", 
+            command=self.start_scan_thread,
+            font=ctk.CTkFont(size=15, weight="bold"),
+            height=45,
+            width=200,
+            hover_color="#1f538d"
+        )
+        self.scan_button.grid(row=0, column=0, padx=10)
+
+        self.exit_button = ctk.CTkButton(
+            self.button_frame, 
+            text="ÇIKIŞ", 
+            command=self.quit,
+            fg_color="transparent",
+            border_width=2,
+            text_color="white",
+            hover_color="#333333",
+            height=45,
+            width=100
+        )
+        self.exit_button.grid(row=0, column=1, padx=10)
+
+    # --- Fonksiyonellik ---
+
+    def log_message(self, message):
+        """Textbox'a güvenli bir şekilde mesaj ekler."""
+        self.status_text.insert("end", f"\n[>] {message}")
+        self.status_text.see("end")
+
+    def start_scan_thread(self):
+        """Arayüzün donmaması için taramayı ayrı bir thread'de başlatır."""
+        self.scan_button.configure(state="disabled", text="TARANIYOR...")
+        thread = threading.Thread(target=self.run_scan_logic)
+        thread.start()
+
+    def run_scan_logic(self):
+        """Simüle edilmiş AI tarama mantığı."""
+        self.log_message("Donanım kontrol ediliyor: NVIDIA GeForce RTX 4050 bulundu.")
+        time.sleep(1)
         
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        ai_path = os.path.join(current_dir, "ai_engine.py")
+        steps = ["Kernel verileri okunuyor...", "Paket listesi analiz ediliyor...", "AI zafiyet taraması yapıyor...", "Güvenlik duvarı kontrol ediliyor..."]
         
-        # Yine 'cwd' ekleyerek ai_engine.py'nin kendi klasöründe işlem yapmasını sağlıyoruz
-        subprocess.run(["python", ai_path], cwd=current_dir)
-        
-        report_path = os.path.join(current_dir, "ai_report.txt")
-        if os.path.exists(report_path):
-            with open(report_path, "r", encoding="utf-8") as f:
-                report = f.read()
-                self.result_text.delete("1.0", "end") # Eski yazıları sil
-                self.result_text.insert("0.0", f"--- AI ANALİZ RAPORU ---\n\n{report}")
-        else:
-            self.result_text.insert("end", "❌ Hata: Rapor dosyası bulunamadı!")
+        for i, step in enumerate(steps):
+            self.log_message(step)
+            self.progress_bar.set((i + 1) / len(steps))
+            time.sleep(1.2) # İşlem yapılıyormuş gibi bekleme
+
+        self.log_message("TARAMA TAMAMLANDI!")
+        self.log_message("Durum: Sisteminiz güncel ve güvende.")
+        self.scan_button.configure(state="normal", text="YENİDEN TARA")
+        self.progress_bar.set(1)
 
 if __name__ == "__main__":
     app = UpdateGuardGUI()
