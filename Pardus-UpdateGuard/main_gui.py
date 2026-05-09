@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from scanner import UpdateScanner
 from PIL import Image, ImageTk
 import os
 import time
@@ -25,6 +26,8 @@ class UpdateGuardGUI(ctk.CTk):
                 self.icon_photo = ImageTk.PhotoImage(pil_img.resize((64, 64), Image.LANCZOS))
                 self.wm_iconphoto(False, self.icon_photo)
             except: pass
+        
+        self.scanner = UpdateScanner(self)
 
         self.setup_ui()
 
@@ -65,9 +68,13 @@ class UpdateGuardGUI(ctk.CTk):
         self.button_frame.pack(pady=10)
 
         # Analiz Butonu: Modern Lacivert
-        self.scan_button = ctk.CTkButton(self.button_frame, text="ANALİZİ BAŞLAT", command=self.start_scan, 
+        # Analiz Butonu Satırını Şöyle Yap:
+        self.scan_button = ctk.CTkButton(self.button_frame, text="ANALİZİ BAŞLAT", 
+                                        command=self.scanner.start_scan_thread, # DOĞRU KOMUT BU
                                         width=240, height=48, font=("Arial", 15, "bold"),
-                                        fg_color="#1c2533", hover_color="#2e3b4e", border_width=1, border_color="#3b4b61")
+                                        fg_color="#1c2533", hover_color="#2e3b4e", 
+                                        border_width=1, border_color="#3b4b61")
+        
         self.scan_button.grid(row=0, column=0, padx=10)
 
         # Çıkış Butonu: Beyazımsı - Şeffaf (Ghost Button)
@@ -97,22 +104,6 @@ class UpdateGuardGUI(ctk.CTk):
             self.main_container._parent_canvas.yview_moveto(i / 100)
             self.update_idletasks()
             time.sleep(0.015)
-
-    def start_scan(self):
-        self.scan_button.configure(state="disabled", text="ANALİZ EDİLİYOR...")
-        self.status_indicator.configure(text="DERİN PAKET ANALİZİ VE CVE SORGUSU AKTİF", text_color="#ff922b")
-        self.console.delete("1.0", "end")
-        threading.Thread(target=self.scan_process, daemon=True).start()
-
-    def scan_process(self):
-        packages = [
-            ("linux-image-6.1.0-21-amd64", "KRİTİK: Yetki Yükseltme Açığı"),
-            ("nvidia-dkms-550.67", "STABİL: Donanım Senkronize"),
-            ("libssl-dev / openssl", "TEHLİKELİ: Aradaki Adam Saldırısı Riski"),
-            ("python3-pip / setuptools", "GÜVENLİ: Sürüm Doğrulandı"),
-            ("systemd / libsystemd0", "STABİL: Çekirdek Bileşenler Tamam"),
-            ("google-chrome-stable", "GÜNCELLEME: Sandbox Yaması Gerekli")
-        ]
         
         for i, (pkg, status) in enumerate(packages):
             msg = f">>> [PROSES] {pkg.ljust(32)} | SONUÇ: {status}"
