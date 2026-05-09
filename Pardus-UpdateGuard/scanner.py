@@ -1,95 +1,115 @@
+import json
+import os
 import subprocess
 import time
 import threading
 
 class UpdateScanner:
     def __init__(self, gui_instance):
-        """
-        gui_instance: main_gui.py içindeki ana sınıfın (self) referansı.
-        Bu sayede buradaki verileri ekrandaki konsola ve ilerleme çubuğuna gönderebiliriz.
-        """
         self.gui = gui_instance
+        # JSON Veritabanını en başta yükleyelim
+        self.risk_db = self.load_risk_db()
+
+    def load_risk_db(self):
+        """Dışarıdaki risks.json dosyasını yükler."""
+        try:
+            with open("risks.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            # Dosya yoksa veya hatalıysa temel bir sözlük döndür
+            return {
+                "linux-image": {"level": "KRİTİK", "desc": "Çekirdek güncellemesi."},
+                "nvidia": {"level": "YÜKSEK", "desc": "Sürücü güncellemesi."}
+            }
 
     def start_scan_thread(self):
-        """Tarama işlemini arayüzü dondurmamak için ayrı bir kanalda (thread) başlatır."""
         scan_thread = threading.Thread(target=self.scan_process)
         scan_thread.daemon = True
         scan_thread.start()
 
     def scan_process(self):
-        """Ana tarama ve analiz süreci."""
-        # Arayüz Hazırlığı
-        self.gui.scan_button.configure(state="disabled", text="SİSTEME BAĞLANILIYOR...")
-        self.gui.status_indicator.configure(text="CANLI VERİ ÇEKİLİYOR...", text_color="#f1c40f")
+        """Ana tarama süreci."""
+        # --- ARAYÜZ SIFIRLAMA ---
+        self.gui.scan_button.configure(state="disabled", text="ANALİZ YAPILIYOR...")
+        self.gui.status_indicator.configure(text="SİSTEM VERİLERİ ANALİZ EDİLİYOR...", text_color="#f1c40f")
         self.gui.console.delete("1.0", "end")
         self.gui.progress_bar.set(0)
 
         try:
-            # 1. ADIM: Pardus Terminaline Bağlanma (Subprocess)
-            # 'apt list --upgradable' komutu sistemdeki güncellemeleri getirir.
-            self.gui.console.insert("end", ">>> [SİSTEM] APT Paket Yöneticisi sorgulanıyor...\n")
+            # --- 1. ADIM: VERİ TOPLAMA ---
+            self.gui.console.insert("end", ">>> [SİSTEM] APT terminal bağlantısı kuruluyor...\n")
+            
+            # Terminal dilini standartlaştırmak için env ekliyoruz (LC_ALL=C)
+            env = os.environ.copy()
+            env["LC_ALL"] = "C"
             
             raw_output = subprocess.check_output(
                 ["apt", "list", "--upgradable"], 
-                stderr=subprocess.STDOUT
+                stderr=subprocess.STDOUT,
+                env=env
             ).decode("utf-8")
 
-            # Metni satırlara böl ve başlık kısmını atla
             all_lines = raw_output.splitlines()
-            real_updates = [line for line in all_lines if "/" in line]
+            real_updates = [line for line in all_lines if "/" in line and "[" in line]
 
             if not real_updates:
-                self.gui.console.insert("end", ">>> [BİLGİ] Sisteminiz tamamen güncel.\n>>> Analiz edilecek riskli paket bulunamadı.")
-                self.gui.progress_bar.set(1.0)
-                self.finalize_scan([])
+                self.handle_no_updates()
                 return
 
-            # 2. ADIM: Paket Analiz Döngüsü (Gerçek Zamanlı)
+            # --- 2. ADIM: ANALİZ DÖNGÜSÜ ---
             total_count = len(real_updates)
-            self.gui.console.insert("end", f">>> [BİLGİ] {total_count} adet güncelleme paketi bulundu. Analiz başlıyor...\n")
+            self.gui.console.insert("end", f">>> [BİLGİ] {total_count} adet paket bulundu. Yapay zeka analizi başlıyor...\n")
 
             for i, line in enumerate(real_updates):
-                # Paket ismini ayıkla (Örn: linux-image-amd64)
                 pkg_name = line.split("/")[0]
                 
-                # --- Geliştirme Kategorisi: Kural Tabanlı AI Mantığı ---
-                risk_level = "DÜŞÜK RİSK"
-                if any(k in pkg_name.lower() for k in ["linux", "kernel", "ssl", "ssh", "firmware", "nvidia"]):
-                    risk_level = "KRİTİK GÜVENLİK"
-
-                # Konsola canlı yazdır
-                msg = f">>> [ANALİZ] {pkg_name.ljust(30)} | DURUM: {risk_level}"
+                # Risk Analizi (JSON'dan veya varsayılan)
+                risk_data = self.analyze_risk(pkg_name)
+                
+                # Konsola yazdırma
+                msg = f">>> [ANALİZ] {pkg_name.ljust(35)} | DURUM: {risk_data['level']}"
                 self.gui.console.insert("end", f"\n{msg}")
                 self.gui.console.see("end")
                 
-                # Progress bar güncelleme
+                # İlerleme çubuğunu paket sayısına göre güncelle
                 self.gui.progress_bar.set((i + 1) / total_count)
-                time.sleep(0.2) # Görsellik için hafif bekleme
+                time.sleep(0.15) # Görsel akıcılık
 
-            # 3. ADIM: Final Raporu
+            # --- 3. ADIM: SONUÇLANDIRMA ---
             self.finalize_scan(real_updates)
 
         except Exception as e:
-            self.gui.console.insert("end", f"\n\n[KRİTİK HATA] Sistem verisi çekilemedi: {e}")
+            self.gui.console.insert("end", f"\n\n[KRİTİK HATA] İşlem yarıda kesildi: {e}")
             self.gui.scan_button.configure(state="normal", text="YENİDEN DENE")
 
+    def analyze_risk(self, pkg_name):
+        """Paket ismine göre veritabanından risk seviyesi döndürür."""
+        for key, data in self.risk_db.items():
+            if key.lower() in pkg_name.lower():
+                return data
+        return {"level": "STABİL", "desc": "Standart güncelleme."}
+
+    def handle_no_updates(self):
+        """Güncelleme yoksa yapılacak işlemler."""
+        self.gui.console.insert("end", ">>> [BİLGİ] Sisteminiz tamamen güncel.\n>>> Herhangi bir risk tespit edilmedi.")
+        self.gui.progress_bar.set(1.0)
+        self.finalize_scan([])
+
     def finalize_scan(self, updates):
-        """Tarama bitince AI önerilerini ekrana basar."""
+        """Final raporunu AI paneline basar."""
         self.gui.status_indicator.configure(text="ANALİZ TAMAMLANDI", text_color="#2ecc71")
         
         if not updates:
-            report = "✨ AI ANALİZİ: Sisteminiz güvenli. Şu an için herhangi bir müdahale gerekmiyor."
+            report = "✨ AI ANALİZİ: Sisteminiz şu an tam koruma altında. Ek bir işleme gerek yok."
         else:
-            critical_count = sum(1 for p in updates if any(k in p for k in ["linux", "kernel", "ssl"]))
+            critical_count = sum(1 for p in updates if self.analyze_risk(p.split("/")[0])["level"] == "KRİTİK")
             
             report = (
                 f"📊 ANALİZ ÖZETİ:\n"
-                f"İncelenen {len(updates)} paketten {critical_count} tanesi yüksek riskli.\n\n"
+                f"Toplam {len(updates)} paketten {critical_count} tanesi yüksek riskli bulundu.\n\n"
                 "🛡️ AI TAVSİYESİ:\n"
-                "Sistem çekirdeği bileşenleri güncellenecek listesinde. "
-                "UpdateGuard, bu güncellemelerin Pardus üzerinde 'Secure Boot' "
-                "ve 'Nvidia Driver' uyumunu bozmaması için işlemden sonra "
-                "sistemi yeniden başlatmanızı önerir."
+                "Kritik çekirdek veya sürücü güncellenmesi tespit edildi. Sistem bütünlüğünü "
+                "korumak için güncellemeleri yapın ve ardından sisteminizi yeniden başlatın."
             )
 
         self.gui.ai_suggestion.configure(text=report)
