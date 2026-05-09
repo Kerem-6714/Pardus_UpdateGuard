@@ -130,10 +130,10 @@ class UpdateGuardGUI(ctk.CTk):
         detailed_ai_report = (
             "SİSTEM ÖZETİ:\n"
             "Yapılan tarama sonucunda sisteminizdeki 142 paket taranmış, 2 tanesinde yüksek öncelikli 'Kritik Zafiyet' tespit edilmiştir.\n\n"
-            "📌 KRİTİK BULGULAR:\n"
+            "KRİTİK BULGULAR:\n"
             "• Çekirdek (Kernel) Analizi: Mevcut çekirdek sürümünüzde bellek yönetimini hedef alan bir sızıntı tespit edildi. Bu durum, yetkisiz kullanıcıların sistem yönetimini ele geçirmesine neden olabilir.\n"
             "• Şifreleme Protokolleri: OpenSSL kütüphanesindeki eski bir sürüm, verilerinizin ağ üzerinden taşınırken deşifre edilme riskini taşımaktadır.\n\n"
-            "🛠️ GÜVENLİK TAVSİYELERİ:\n"
+            "GÜVENLİK TAVSİYELERİ:\n"
             "1. ACİL GÜNCELLEME: Terminali açın ve 'sudo apt update && sudo apt full-upgrade' komutlarını kullanarak kritik yamaları yükleyin.\n"
             "2. DONANIM OPTİMİZASYONU: RTX 4050 kartınızın sürücüleri güncel görünse de, kernel güncellemesi sonrası 'nvidia-smi' komutu ile sürücü sağlığını kontrol etmeniz önerilir.\n"
             "3. HİJYEN: Kullanılmayan eski paketleri 'sudo apt autoremove' ile kaldırarak saldırı yüzeyini daraltın.\n\n"
