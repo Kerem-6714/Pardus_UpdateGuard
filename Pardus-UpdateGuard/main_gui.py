@@ -73,8 +73,11 @@ class UpdateGuardGUI(ctk.CTk):
         # Çıkış Butonu: Beyazımsı - Şeffaf (Ghost Button)
         self.exit_button = ctk.CTkButton(self.button_frame, text="ÇIKIŞ", command=self.quit, 
                                         width=120, height=48, font=("Arial", 14),
-                                        fg_color="transparent", hover_color="#ffffff1a", # %10 beyaz transparan hover
-                                        border_width=1, border_color="#e0e0e0", text_color="#e0e0e0")
+                                        fg_color="transparent",
+                                        hover_color="#212f3d",
+                                        border_width=1,
+                                        border_color="#e0e0e0",
+                                        text_color="#e0e0e0")
         self.exit_button.grid(row=0, column=1, padx=10)
 
         # 6. AI Önerileri Paneli (Genişletilmiş Rapor)
