@@ -71,11 +71,22 @@ class UpdateGuardGUI(ctk.CTk):
         # Analiz Butonu Satırını Şöyle Yap:
         self.scan_button = ctk.CTkButton(self.button_frame, text="ANALİZİ BAŞLAT", 
                                         command=self.scanner.start_scan_thread, # DOĞRU KOMUT BU
-                                        width=240, height=48, font=("Arial", 15, "bold"),
+                                        width=200, height=48, font=("Arial", 15, "bold"),
                                         fg_color="#1c2533", hover_color="#2e3b4e", 
                                         border_width=1, border_color="#3b4b61")
         
         self.scan_button.grid(row=0, column=0, padx=10)
+
+        self.upgrade_button = ctk.CTkButton(self.button_frame, text="SİSTEMİ GÜNCELLE", 
+                                           command=self.scanner.start_upgrade_thread, 
+                                           width=200, height=48, font=("Arial", 14, "bold"),
+                                           fg_color="#1e3a2f", 
+                                           hover_color="#27ae60",
+                                           text_color="#63e6be",
+                                           border_width=1,
+                                           border_color="#2ecc71",
+                                           state="disabled") # Tarama bitince aktif olacak
+        self.upgrade_button.grid(row=0, column=1, padx=10)
 
         # Çıkış Butonu: Beyazımsı - Şeffaf (Ghost Button)
         self.exit_button = ctk.CTkButton(self.button_frame, text="ÇIKIŞ", command=self.quit, 
@@ -85,7 +96,7 @@ class UpdateGuardGUI(ctk.CTk):
                                         border_width=1,
                                         border_color="#e0e0e0",
                                         text_color="#e0e0e0")
-        self.exit_button.grid(row=0, column=1, padx=10)
+        self.exit_button.grid(row=0, column=2, padx=10)
 
         # 6. AI Önerileri Paneli (Genişletilmiş Rapor)
         self.ai_frame = ctk.CTkFrame(self.main_container, width=680, fg_color="#0d1421", border_width=1, border_color="#1c2533")
