@@ -114,7 +114,52 @@ class UpdateScanner:
             else:
                 report += "✅ GÜVENLİK DURUMU:\n"
                 report += "Bulunan paketler sistem kararlılığını bozacak düzeyde değil. Güvenle güncelleyebilirsiniz."
+                self.gui.upgrade_button.configure(state="normal")
 
         self.gui.ai_suggestion.configure(text=report)
         self.gui.scan_button.configure(state="normal", text="YENİDEN TARA")
         self.gui.smooth_scroll_to_bottom()
+        
+    def start_upgrade_thread(self):
+        """Güncelleme işlemini ayrı bir kanalda (thread) başlatır."""
+        upgrade_thread = threading.Thread(target=self.upgrade_process)
+        upgrade_thread.daemon = True
+        upgrade_thread.start()
+
+    def upgrade_process(self):
+        """Gerçek Pardus güncelleme komutlarını çalıştırır."""
+        # Arayüzü güncelleme moduna al
+        self.gui.upgrade_button.configure(state="disabled", text="GÜNCELLENİYOR...")
+        self.gui.scan_button.configure(state="disabled")
+        
+        self.gui.console.insert("end", "\n\n" + "="*50)
+        self.gui.console.insert("end", "\n>>> [İŞLEM] Sistem güncelleniyor. Lütfen şifre girin...\n")
+        self.gui.console.insert("end", "="*50 + "\n")
+        self.gui.console.see("end")
+
+        try:
+            # pkexec: Grafik arayüzde yetki (şifre) istemek için
+            # apt-get dist-upgrade: Tüm bağımlılıklarla beraber tam güncelleme
+            cmd = ["pkexec", "apt-get", "dist-upgrade", "-y"]
+            
+            # Komut çıktısını canlı olarak konsola yansıtmak için Popen kullanıyoruz
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            
+            for line in process.stdout:
+               self.gui.console.insert("end", f"> {line}")
+               self.gui.console.see("end")
+
+            process.wait()
+
+            if process.returncode == 0:
+               self.gui.console.insert("end", "\n>>> [BAŞARILI] Sistem başarıyla güncellendi!\n")
+               self.gui.status_indicator.configure(text="SİSTEM GÜNCEL", text_color="#2ecc71")
+            else:
+               self.gui.console.insert("end", "\n>>> [İPTAL/HATA] Güncelleme işlemi tamamlanamadı.\n")
+
+        except Exception as e:
+            self.gui.console.insert("end", f"\n[KRİTİK HATA] {e}\n")
+        
+        # İşlem bitince butonları eski haline getir
+        self.gui.upgrade_button.configure(state="disabled", text="SİSTEM GÜNCEL")
+        self.gui.scan_button.configure(state="normal", text="YENİDEN TARA")
