@@ -96,21 +96,24 @@ class UpdateScanner:
         self.finalize_scan([])
 
     def finalize_scan(self, updates):
-        """Final raporunu AI paneline basar."""
         self.gui.status_indicator.configure(text="ANALİZ TAMAMLANDI", text_color="#2ecc71")
         
         if not updates:
             report = "✨ AI ANALİZİ: Sisteminiz şu an tam koruma altında. Ek bir işleme gerek yok."
         else:
-            critical_count = sum(1 for p in updates if self.analyze_risk(p.split("/")[0])["level"] == "KRİTİK")
+            # Kritik paketleri sayalım
+            criticals = [u for u in updates if self.analyze_risk(u.split("/")[0])["level"] == "KRİTİK"]
             
-            report = (
-                f"📊 ANALİZ ÖZETİ:\n"
-                f"Toplam {len(updates)} paketten {critical_count} tanesi yüksek riskli bulundu.\n\n"
-                "🛡️ AI TAVSİYESİ:\n"
-                "Kritik çekirdek veya sürücü güncellenmesi tespit edildi. Sistem bütünlüğünü "
-                "korumak için güncellemeleri yapın ve ardından sisteminizi yeniden başlatın."
-            )
+            report = f"📊 ANALİZ ÖZETİ:\n"
+            report += f"Toplam {len(updates)} paket incelendi. {len(criticals)} adet kritik zafiyet riski bulundu.\n\n"
+            
+            if len(criticals) > 0:
+                report += "🛡️ KRİTİK UYARI:\n"
+                report += "Sisteminde çekirdek veya güvenlik seviyesinde değişimler var. "
+                report += "UpdateGuard bu güncellemeleri 'Yüksek Öncelikli' olarak işaretledi."
+            else:
+                report += "✅ GÜVENLİK DURUMU:\n"
+                report += "Bulunan paketler sistem kararlılığını bozacak düzeyde değil. Güvenle güncelleyebilirsiniz."
 
         self.gui.ai_suggestion.configure(text=report)
         self.gui.scan_button.configure(state="normal", text="YENİDEN TARA")
