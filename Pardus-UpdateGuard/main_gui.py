@@ -56,7 +56,9 @@ class UpdateGuardGUI(ctk.CTk):
         self.console = ctk.CTkTextbox(self.main_container, width=680, height=220, font=("Consolas", 11), 
                                       fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
         self.console.pack(padx=20, pady=5)
-        self.console.insert("0.0", ">>> NeuralShield AI katmanı yüklendi.\n>>> RTX 4050 donanım ivmelendirmesi aktif.\n>>> Komut bekleniyor...")
+        self.console.insert("0.0", ">>> UpdateGuard AI Analiz Motoru başlatıldı...\n"
+                           ">>> Pardus APT veritabanı bağlantısı kuruldu.\n"
+                           ">>> Sistem analiz protokolü hazır. Komut bekleniyor...\n")
 
         # 4. İlerleme Çubuğu
         self.progress_bar = ctk.CTkProgressBar(self.main_container, width=620, progress_color="#4dabf7", fg_color="#1c2533")
