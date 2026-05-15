@@ -96,26 +96,57 @@ class UpdateScanner:
         self.finalize_scan([])
 
     def finalize_scan(self, updates):
+        """Tarama bitince risk çubuğunu doldurur ve AI raporunu hazırlar."""
         self.gui.status_indicator.configure(text="ANALİZ TAMAMLANDI", text_color="#2ecc71")
         
+        # 1. Risk Skorunu Hesapla
+        max_score = 0
+        if updates:
+            for p in updates:
+                p_name = p.split("/")[0]
+                res = self.analyze_risk(p_name)
+                if res["score"] > max_score:
+                    max_score = res["score"]
+        else:
+            max_score = 5 # Güncelleme yoksa risk %5 (Taban değer)
+
+        # 2. Risk Çubuğunu ve Rengini Güncelle
+        risk_ratio = max_score / 100
+        self.gui.risk_bar.set(risk_ratio)
+
+        if max_score >= 80:
+            risk_color = "#e74c3c" # Kırmızı
+            risk_status = "KRİTİK"
+        elif max_score >= 40:
+            risk_color = "#f1c40f" # Sarı
+            risk_status = "ORTA RİSK"
+        else:
+            risk_color = "#2ecc71" # Yeşil
+            risk_status = "GÜVENLİ"
+
+        self.gui.risk_bar.configure(progress_color=risk_color)
+        self.gui.risk_label.configure(text=f"SİSTEM RİSK ANALİZİ: %{max_score} ({risk_status})", text_color=risk_color)
+
+        # 3. Rapor Metnini Oluştur
         if not updates:
             report = "✨ AI ANALİZİ: Sisteminiz şu an tam koruma altında. Ek bir işleme gerek yok."
+            self.gui.upgrade_button.configure(state="disabled") # Güncelleme yoksa buton kapalı kalsın
         else:
-            # Kritik paketleri sayalım
             criticals = [u for u in updates if self.analyze_risk(u.split("/")[0])["level"] == "KRİTİK"]
             
             report = f"📊 ANALİZ ÖZETİ:\n"
-            report += f"Toplam {len(updates)} paket incelendi. {len(criticals)} adet kritik zafiyet riski bulundu.\n\n"
+            report += f"Toplam {len(updates)} paket incelendi. {len(criticals)} adet kritik risk bulundu.\n\n"
             
             if len(criticals) > 0:
-                report += "🛡️ KRİTİK UYARI:\n"
-                report += "Sisteminde çekirdek veya güvenlik seviyesinde değişimler var. "
+                report += "🛡️ KRİTİK UYARI:\nSisteminde çekirdek veya güvenlik seviyesinde değişimler var. "
                 report += "UpdateGuard bu güncellemeleri 'Yüksek Öncelikli' olarak işaretledi."
             else:
-                report += "✅ GÜVENLİK DURUMU:\n"
-                report += "Bulunan paketler sistem kararlılığını bozacak düzeyde değil. Güvenle güncelleyebilirsiniz."
-                self.gui.upgrade_button.configure(state="normal")
+                report += "✅ GÜVENLİK DURUMU:\nBulunan paketler sistem kararlılığını bozacak düzeyde değil."
 
+            # Güncelleme varsa butonu her durumda aktif et
+            self.gui.upgrade_button.configure(state="normal")
+
+        # 4. Arayüzü Güncelle
         self.gui.ai_suggestion.configure(text=report)
         self.gui.scan_button.configure(state="normal", text="YENİDEN TARA")
         self.gui.smooth_scroll_to_bottom()
