@@ -98,6 +98,21 @@ class UpdateGuardGUI(ctk.CTk):
                                         text_color="#e0e0e0")
         self.exit_button.grid(row=0, column=2, padx=10)
 
+        # --- YENİ: 6. Risk Gösterge Paneli ---
+        self.risk_frame = ctk.CTkFrame(self.main_container, fg_color="#0d1421", border_width=1, border_color="#1c2533")
+        self.risk_frame.pack(fill="x", padx=20, pady=(10, 0))
+
+        self.risk_label = ctk.CTkLabel(self.risk_frame, 
+                                     text="SİSTEM RİSK ANALİZİ: BEKLENİYOR", 
+                                     font=("Arial", 13, "bold"),
+                                     text_color="#e0e0e0")
+        self.risk_label.pack(side="top", anchor="w", padx=15, pady=(10, 5))
+
+        self.risk_bar = ctk.CTkProgressBar(self.risk_frame, width=640, height=12)
+        self.risk_bar.set(0) # Başlangıçta boş
+        self.risk_bar.pack(fill="x", padx=15, pady=(0, 15))
+        self.risk_bar.configure(progress_color="#2ecc71") # Varsayılan yeşil
+
         # 6. AI Önerileri Paneli (Genişletilmiş Rapor)
         self.ai_frame = ctk.CTkFrame(self.main_container, width=680, fg_color="#0d1421", border_width=1, border_color="#1c2533")
         self.ai_frame.pack(padx=20, pady=30, fill="x")
