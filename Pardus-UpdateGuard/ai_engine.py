@@ -7,10 +7,10 @@ def analyze_with_ai():
         with open("updates.json", "r") as f:
             updates = json.load(f)
     except FileNotFoundError:
-        print("❌ Hata: updates.json bulunamadı. Önce scanner.py'yi çalıştır!")
+        print("Hata: updates.json bulunamadı. Önce scanner.py'yi çalıştır!")
         return
 
-    print("🤖 Yapay Zeka analizine başlanıyor...")
+    print("Yapay Zeka analizine başlanıyor...")
 
     # AI'ya göndereceğimiz komut (Prompt)
     prompt = f"""
