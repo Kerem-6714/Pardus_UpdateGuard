@@ -48,3 +48,22 @@ Proje, yazılım mühendisliği standartlarına uygun olarak modüler (MVC benze
 ├── 📄 config.json        # Kullanıcı ayarlarının saklandığı yerel veritabanı
 ├── 📄 risks.json         # Bilinen zafiyet vektörleri imza tabanlı risk matrisi
 └── 🖼️ logo.png           # Uygulama ikon ve amblem görseli
+
+# 🛡️ Güvenlik ve Hata Toleransı (Fault Tolerance)
+
+* **Veritabanı Koruma Çemberi:** `risks.json` veya `config.json` dosyaları silinirse kod çökmez; çalışma zamanında (Runtime) hafızada sanal bir bellek oluşturarak kesintisiz çalışmaya devam eder.
+* **Grafiksel Yetki İstemi (pkexec):** Sistem güncellenirken terminal tabanlı güvensiz `sudo` yerine, Linux standartlarında grafiksel şifre sorma mimarisi (`policykit`) tetiklenir.
+* **Önbellek Kilit Koruması:** Tarama ve kurulum esnasında kritik butonlar geçici olarak dondurularak kullanıcının APT önbelleğini (`/var/lib/dpkg/lock`) kilitlemesi engellenir.
+* **Akıllı Kurulum Kontrolü:** Sistemde güncellenecek paket yoksa veya tarama yapılmadıysa, **"SİSTEMİ GÜNCELLE"** butonu terminal komut hatlarına inmeyerek işlemi güvenli bir uyarıyla sonlandırır.
+
+---
+
+## 💻 Kurulum ve Çalıştırma
+
+### Gereksinimler
+Sistemin çalışabilmesi için Pardus/Linux ortamında Python3 ve gerekli kütüphanelerin yüklü olması gerekir:
+
+```bash
+sudo apt update
+sudo apt install python3-pip python3-pil python3-pil.imagetk -y
+pip3 install customtkinter
