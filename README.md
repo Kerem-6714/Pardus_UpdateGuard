@@ -48,13 +48,3 @@ Proje, yazılım mühendisliği standartlarına uygun olarak modüler (MVC benze
 ├── 📄 config.json        # Kullanıcı ayarlarının saklandığı yerel veritabanı
 ├── 📄 risks.json         # Bilinen zafiyet vektörleri imza tabanlı risk matrisi
 └── 🖼️ logo.png           # Uygulama ikon ve amblem görseli
-
-# Pardus_UpdateGuard
-| Ay | Aşama | İşlemler | Araçlar |
-| :--- | :--- | :--- | :--- |
-| **MAYIS** | Veri & Altyapı | python-apt ile paket çekme, changelog ayıklama | VS Code, Python |
-| **MAYIS** | AI & CUDA | Ollama kurulumu, CUDA analiz motoru | CUDA, Llama 3 |
-| **HAZİRAN** | Arayüz (GUI) | PyQt6 panel tasarımı, Renk kodlu analiz | PyQt6, Qt |
-| **HAZİRAN** | Öneri Sistemi | AI Karar/Eylem planı, Yedekleme önerileri | Copilot, Python |
-| **TEMMUZ** | **TEST** | 1 Temmuz: VM üzerinde stres testleri | VirtualBox, Pardus |
-| **TEMMUZ** | Teslim | Dokümantasyon ve Final Yayını | GitHub |
