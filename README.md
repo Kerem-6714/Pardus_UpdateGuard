@@ -54,3 +54,10 @@ Sistemin çalışabilmesi için Pardus/Linux ortamında Python3 ve gerekli küt�
 sudo apt update
 sudo apt install python3-pip python3-pil python3-pil.imagetk -y
 pip3 install customtkinter
+```
+---
+
+## Çalıştırma
+
+Proje klasörüne gidin ve ana arayüz dosyasını tetikleyin:
+
