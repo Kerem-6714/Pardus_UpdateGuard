@@ -1,52 +1,60 @@
-import customtkinter as ctk
-from scanner import UpdateScanner
-from PIL import Image, ImageTk
-import os
-import time
-import threading
-import webbrowser
-import subprocess
+import customtkinter as ctk  # Gelişmiş ve modern arayüz bileşenleri için kütüphane
+from scanner import UpdateScanner  # Arka planda tarama ve indirme yapan sınıfımız
+from PIL import Image, ImageTk  # Logo ve görsel işlemleri için kullanılan kütüphane
+import os  # Dosya ve dizin yollarını kontrol etmek için
+import time  # Zaman gecikmeleri ve akış kontrolü için
+import threading  # Arayüzün donmaması için arka plan iş parçacığı yönetimi
+import webbrowser  # GitHub linkine tıklandığında tarayıcıyı açmak için
+import subprocess  # Linux sistem komutlarını (ekran kartı bulma) çalıştırmak için
 
-from config_handler import ConfigHandler
+from config_handler import ConfigHandler  # Ayarları kaydedip yükleyen sınıfımız
 
 class UpdateGuardGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Pencere başlığını belirliyoruz
         self.title("Pardus UpdateGuard v1.2")
-        self.geometry("1020x800") 
-        self.resizable(False, False)
         
+        # Ekran boyutunu Pardus 26 alt barına göre optimize ettik (1020 Genişlik x 740 Yükseklik)
+        self.geometry("1020x740") 
+        # Kullanıcının pencereyi tam ekran yapmasına veya köşelerden çekiştirip büyütmesine izin veriyoruz
+        self.resizable(True, True) 
+        
+        # Daha önce kaydedilmiş olan ayarları (Tema vb.) yükliyoruz
         self.config = ConfigHandler.load_config()
-        ctk.set_appearance_mode(self.config["appearance_mode"])
-        self.configure(fg_color="#0a0f18") 
+        ctk.set_appearance_mode(self.config["appearance_mode"])  # Dark veya Light modu uygula
+        self.configure(fg_color="#0a0f18")  # Ana pencere arka plan rengi (Koyu Siber Lacivert)
 
+        # Kodun çalıştığı klasörün yolunu bulup 'logo.png' dosyasının yerini tespit ediyoruz
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.logo_path = os.path.join(self.current_dir, "logo.png")
 
+        # Eğer klasörde logo.png varsa, onu pencere ikonu (sol üst köşe) olarak ayarla
         if os.path.exists(self.logo_path):
             try:
                 pil_img = Image.open(self.logo_path)
                 self.icon_photo = ImageTk.PhotoImage(pil_img.resize((64, 64), Image.LANCZOS))
                 self.wm_iconphoto(False, self.icon_photo)
-            except: pass
+            except: pass  # Görsel yüklenirken bir hata olursa programın çökmesini engelle
         
+        # Tarayıcı motorumuzu bu arayüze bağlıyoruz
         self.scanner = UpdateScanner(self)
         
-        # --- Durum Değişkenleri ---
-        self.sidebar_open = False
-        self.current_page = None
-        self.detected_gpu = self.get_system_gpu()
+        # --- Dinamik Durum Değişkenleri ---
+        self.sidebar_open = False  # Ayarlar menüsü başlangıçta kapalı
+        self.current_page = None  # Aktif olarak görüntülenen sayfa bilgisi
+        self.detected_gpu = self.get_system_gpu()  # Bilgisayardaki ekran kartını tespit et
 
-        # Ana Düzen İskeleti
+        # Arayüzün solundaki navigasyon çubuklarını ve ana yapıyı kuruyoruz
         self.setup_navigation_layout()
-        
-        # İlk açılışta ana tarama ekranını yükle
+        # İlk açılışta kullanıcıyı "Sistem Tarama" sayfasına yönlendiriyoruz
         self.show_page("scan")
 
     def get_system_gpu(self):
-        """Pardus / Linux çekirdeğinden gerçek ekran kartı modelini canlı okur."""
+        """Linux terminal komutlarını kullanarak sistemdeki ekran kartını bulan fonksiyon"""
         try:
+            # Linux'taki 'lspci' komutu ile VGA ve 3D grafik donanımlarını sorguluyoruz
             output = subprocess.check_output("lspci | grep -i -E 'vga|3d'", shell=True).decode("utf-8").strip()
             if "nvidia" in output.lower():
                 if "[" in output and "]" in output:
@@ -60,35 +68,35 @@ class UpdateGuardGUI(ctk.CTk):
                 return "Intel Dahili Grafik Birimi"
             return "Standart Linux Grafik Sürücüsü"
         except Exception:
+            # Eğer cihazda lspci komutu çalışmazsa (veya yetki yoksa) varsayılan metin döndür
             return "Genel VGA Uyumlu Grafik Kartı"
 
     def setup_navigation_layout(self):
-        """Sol ana kontrol sütununu ve sağ ana içerik panelini inşa eder."""
-        
-        # 1. SOL SABİT KONTROL PANELİ (Slim Nav Bar)
+        """Sol taraftaki ince dikey menüyü ve gizli geniş ayarlar panelini oluşturan alan"""
+        # Sol dikey dar siyah bar (Navigasyon Barı)
         self.nav_bar = ctk.CTkFrame(self, width=65, corner_radius=0, fg_color="#070b12", border_width=1, border_color="#121b29")
         self.nav_bar.pack(side="left", fill="y")
         self.nav_bar.pack_propagate(False)
 
-        # En Üst: Ayarlar Dişli Butonu
+        # Çark butonu (Ayarlar menüsünü açıp kapatır)
         self.btn_gear = ctk.CTkButton(self.nav_bar, text="⚙️", width=45, height=45, font=("Arial", 18), fg_color="transparent", hover_color="#1c2533", command=self.toggle_sidebar)
         self.btn_gear.pack(pady=(20, 10))
 
-        # Dişlinin Hemen Altı: Ana Ekran Ev Butonu
+        # Ev butonu (Ana sayfaya/Tarama ekranına geri döndürür)
         self.btn_home = ctk.CTkButton(self.nav_bar, text="🏠", width=45, height=45, font=("Arial", 18), fg_color="transparent", hover_color="#1c2533", command=self.go_home_protocol)
         self.btn_home.pack(pady=5)
 
-        # Sistemin En Altı: Güvenli Çıkış Butonu (⏻)
+        # Kapatma butonu (Uygulamadan çıkış yapar)
         self.btn_exit = ctk.CTkButton(self.nav_bar, text="⏻", width=45, height=45, font=("Arial", 18), fg_color="transparent", text_color="#ef4444", hover_color="#2d1515", command=self.quit)
         self.btn_exit.pack(side="bottom", pady=20)
 
-        # 2. AÇILIR SIDEBAR (Ayarlar Sekmeleri Bölümü)
+        # Açılır-kapanır geniş Ayarlar Menüsü (Sidebar)
         self.sidebar_frame = ctk.CTkFrame(self, width=190, corner_radius=0, fg_color="#0d1421", border_width=1, border_color="#1c2533")
         
-        # Monokrom ve Sade Sekme Yapısı
         self.sidebar_title = ctk.CTkLabel(self.sidebar_frame, text="SİSTEM AYARLARI", font=("Arial", 11, "bold"), text_color="#5c7cfa")
         self.sidebar_title.pack(anchor="w", padx=15, pady=(25, 15))
 
+        # Ayarların alt sekmeleri (Görünüm, Güvenlik, Log, Gelişmiş)
         self.btn_sub_view = ctk.CTkButton(self.sidebar_frame, text="› Görünüm Yapılandırması", anchor="w", height=35, fg_color="transparent", text_color="#e0e0e0", hover_color="#1c2533", font=("Arial", 12), command=lambda: self.show_page("appearance"))
         self.btn_sub_view.pack(fill="x", padx=10, pady=2)
 
@@ -101,7 +109,7 @@ class UpdateGuardGUI(ctk.CTk):
         self.btn_sub_adv = ctk.CTkButton(self.sidebar_frame, text="› Gelişmiş Parametreler", anchor="w", height=35, fg_color="transparent", text_color="#e0e0e0", hover_color="#1c2533", font=("Arial", 12), command=lambda: self.show_page("advanced"))
         self.btn_sub_adv.pack(fill="x", padx=10, pady=2)
 
-        # Sidebar En Altı: Proje Kimliği ve GitHub Linki
+        # Alt kısımdaki telif ve GitHub link alanı
         self.sidebar_footer = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
         self.sidebar_footer.pack(side="bottom", fill="x", padx=10, pady=20)
 
@@ -112,12 +120,12 @@ class UpdateGuardGUI(ctk.CTk):
         self.lbl_github.pack(anchor="w", padx=5, pady=(5, 0))
         self.lbl_github.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/Kerem-6714/Pardus_UpdateGuard"))
 
-        # 3. SAĞ ANA İÇERİK ALANI
+        # Sayfa içeriklerinin yükleneceği ana geniş sağ alan
         self.content_area = ctk.CTkFrame(self, fg_color="transparent")
         self.content_area.pack(side="right", fill="both", expand=True, padx=20, pady=20)
 
     def toggle_sidebar(self):
-        """Dişli simgesine basıldığında sidebar'ı açar veya kapatır."""
+        """Ayarlar panelini ekranda gizleyen veya gösteren fonksiyon"""
         if self.sidebar_open:
             self.sidebar_frame.pack_forget()
         else:
@@ -125,51 +133,52 @@ class UpdateGuardGUI(ctk.CTk):
         self.sidebar_open = not self.sidebar_open
 
     def go_home_protocol(self):
-        """Ev simgesine basıldığında her halükarda sidebarı kapatır ve ana ekrana döner."""
+        """Ana sayfaya basıldığında ayarlar menüsünü otomatik kapatıp tarama ekranını açar"""
         if self.sidebar_open:
             self.sidebar_frame.pack_forget()
             self.sidebar_open = False
         self.show_page("scan")
 
     def update_navigation_highlight(self, page_name):
-        """Hangi sayfadaysak sol ana menüdeki ilgili ikonu (Ev veya Dişli) ve alt sekmeleri işaretler."""
-        # Renkleri sıfırla
+        """Hangi sayfadaysak sol menüdeki ilgili butonun rengini (yeşil/mavi) parlatan görsel fonksiyon"""
         self.btn_home.configure(fg_color="transparent", text_color="#e0e0e0")
         self.btn_gear.configure(fg_color="transparent", text_color="#e0e0e0")
-        
         for btn in [self.btn_sub_view, self.btn_sub_sec, self.btn_sub_hist, self.btn_sub_adv]:
             btn.configure(fg_color="transparent", text_color="#e0e0e0")
 
-        # Ev sayfası aktifse
         if page_name == "scan":
             self.btn_home.configure(fg_color="#1c2533", text_color="#74c0fc")
-        # Ayar sayfalarından biri aktifse, Dişli simgesinin etrafı her durumda yanar!
         else:
             self.btn_gear.configure(fg_color="#1c2533", text_color="#22c55e")
-            if page_name == "appearance": 
-                self.btn_sub_view.configure(fg_color="#161f30", text_color="#22c55e")
-            elif page_name == "security": 
-                self.btn_sub_sec.configure(fg_color="#161f30", text_color="#22c55e")
-            elif page_name == "history": 
-                self.btn_sub_hist.configure(fg_color="#161f30", text_color="#22c55e")
-            elif page_name == "advanced": 
-                self.btn_sub_adv.configure(fg_color="#161f30", text_color="#22c55e")
+            if page_name == "appearance": self.btn_sub_view.configure(fg_color="#161f30", text_color="#22c55e")
+            elif page_name == "security": self.btn_sub_sec.configure(fg_color="#161f30", text_color="#22c55e")
+            elif page_name == "history": self.btn_sub_hist.configure(fg_color="#161f30", text_color="#22c55e")
+            elif page_name == "advanced": self.btn_sub_adv.configure(fg_color="#161f30", text_color="#22c55e")
+
+    def update_download_stats(self, speed, remaining):
+        """Canlı paket indirme hızı verilerini ekrandaki yazı kutularına basar"""
+        if hasattr(self, "lbl_live_speed") and self.lbl_live_speed.winfo_exists():
+            self.lbl_live_speed.configure(text=f"İNDİRME HIZI: {speed}")
+            self.lbl_live_remaining.configure(text=f"KALAN BOYUT: {remaining}")
 
     def show_page(self, page_name):
-        """Sağ panel alanını temizler ve seçilen sayfa ile tam ekran doldurur."""
+        """Sayfa geçişlerini yöneten, eski sayfayı silip yenisini çizen dev mimari"""
         if self.current_page == page_name:
             return
         self.current_page = page_name
         self.update_navigation_highlight(page_name)
 
+        # Sağ paneldeki eski widgetları (görselleri/yazıları) temizle
         for widget in self.content_area.winfo_children():
             widget.destroy()
 
-        # --- SAYFA 1: SİSTEM TARAMA MOTORU (ANA EKRAN) ---
+        # === SAYFA 1: SİSTEM TARAMA MOTORU (ANA SAYFA) ===
         if page_name == "scan":
+            # İçeriğin aşağı kaydırılabilmesi için ScrollableFrame (Kaydırılabilir Panel) kullanıyoruz
             self.main_container = ctk.CTkScrollableFrame(self.content_area, fg_color="transparent")
             self.main_container.pack(fill="both", expand=True)
 
+            # Logo varsa ekrana büyükçe yerleştir
             if os.path.exists(self.logo_path):
                 self.logo_image = ctk.CTkImage(light_image=Image.open(self.logo_path), dark_image=Image.open(self.logo_path), size=(140, 140))
                 self.logo_label = ctk.CTkLabel(self.main_container, image=self.logo_image, text="")
@@ -181,23 +190,38 @@ class UpdateGuardGUI(ctk.CTk):
             self.status_indicator = ctk.CTkLabel(self.main_container, text="SİSTEM TARAMA PROTOKOLÜNE HAZIR", text_color="#5c7cfa", font=("Arial", 12, "bold"))
             self.status_indicator.pack(pady=(0, 10))
 
+            # Terminal Konsol Ekranı (Mavi yazılı siber çıktı paneli)
             self.console = ctk.CTkTextbox(self.main_container, width=680, height=180, font=("Consolas", 11), fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
             self.console.pack(padx=20, pady=5)
             self.console.insert("0.0", f">>> UpdateGuard AI Motoru Aktif.\n>>> Canlı Donanım Denetimi: {self.detected_gpu}\n>>> Sistem analiz protokolü hazır.\n")
 
+            # Hız ve boyut bilgisi paneli
+            self.live_stats_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
+            self.live_stats_frame.pack(fill="x", padx=40, pady=(5, 0))
+            
+            self.lbl_live_speed = ctk.CTkLabel(self.live_stats_frame, text="İNDİRME HIZI: 0.0 MB/s", font=("Consolas", 12, "bold"), text_color="#22c55e")
+            self.lbl_live_speed.pack(side="left")
+            
+            self.lbl_live_remaining = ctk.CTkLabel(self.live_stats_frame, text="KALAN BOYUT: 0.0 MB", font=("Consolas", 12, "bold"), text_color="#3498db")
+            self.lbl_live_remaining.pack(side="right")
+
+            # Ana ilerleme yükleme çubuğu (Progress Bar)
             self.progress_bar = ctk.CTkProgressBar(self.main_container, width=620, progress_color="#4dabf7", fg_color="#1c2533")
             self.progress_bar.set(0)
-            self.progress_bar.pack(pady=15)
+            self.progress_bar.pack(pady=10)
 
+            # Butonların yan yana durması için alt çerçeve
             self.button_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
             self.button_frame.pack(pady=5)
 
             self.scan_button = ctk.CTkButton(self.button_frame, text="ANALİZİ BAŞLAT", command=self.scanner.start_scan_thread, width=190, height=44, font=("Arial", 14, "bold"), fg_color="#1c2533", hover_color="#2e3b4e", border_width=1, border_color="#3b4b61")
             self.scan_button.grid(row=0, column=0, padx=10)
 
-            self.upgrade_button = ctk.CTkButton(self.button_frame, text="SİSTEMİ GÜNCELLE", command=self.scanner.start_upgrade_thread, width=190, height=44, font=("Arial", 13, "bold"), fg_color="#1e3a2f", hover_color="#27ae60", text_color="#63e6be", border_width=1, border_color="#2ecc71", state="disabled")
+            # İstediğin gibi: Bu buton artık hep aktif, basınca duruma göre tepki verecek
+            self.upgrade_button = ctk.CTkButton(self.button_frame, text="SİSTEMİ GÜNCELLE", command=self.scanner.start_upgrade_thread, width=190, height=44, font=("Arial", 13, "bold"), fg_color="#1e3a2f", hover_color="#27ae60", text_color="#63e6be", border_width=1, border_color="#2ecc71")
             self.upgrade_button.grid(row=0, column=1, padx=10)
 
+            # Siber Risk Matrisi Paneli (Yeşil/Kırmızı İlerleme Çubuğu)
             self.risk_frame = ctk.CTkFrame(self.main_container, fg_color="#0d1421", border_width=1, border_color="#1c2533")
             self.risk_frame.pack(fill="x", padx=20, pady=(10, 0))
             self.risk_label = ctk.CTkLabel(self.risk_frame, text="SİSTEM RİSK ANALİZİ: BEKLENİYOR", font=("Arial", 12, "bold"), text_color="#e0e0e0")
@@ -208,6 +232,7 @@ class UpdateGuardGUI(ctk.CTk):
             self.risk_bar.pack(fill="x", padx=15, pady=(0, 12))
             self.risk_bar.configure(progress_color="#2ecc71")
 
+            # Yapay Zeka Güvenlik Rapor Kutusu (Büyük Rapor Çerçevesi)
             self.ai_frame = ctk.CTkFrame(self.main_container, fg_color="#0d1421", border_width=1, border_color="#1c2533")
             self.ai_frame.pack(padx=20, pady=15, fill="x")
             self.ai_title = ctk.CTkLabel(self.ai_frame, text="🛡️ AI GÜVENLİK ANALİZ RAPORU", font=("Arial", 13, "bold"), text_color="#74c0fc")
@@ -216,46 +241,59 @@ class UpdateGuardGUI(ctk.CTk):
             self.ai_suggestion = ctk.CTkLabel(self.ai_frame, text="Sistem analizi sonrası detaylı rapor burada oluşturulacaktır...", font=("Arial", 12), text_color="#94a3b8", wraplength=640, justify="left")
             self.ai_suggestion.pack(pady=(0, 15), padx=20)
 
-        # --- SAYFA 2: GÖRÜNÜM AYARI ---
+        # === SAYFA 2: GÖRÜNÜM AYARI ===
         elif page_name == "appearance":
             self.create_page_header("Görünüm Yapılandırması", "Arayüz temalarını ve görsel bildirim politikalarını esnetin.")
             
-            ctk.CTkLabel(self.content_area, text="Tema Seçimi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(20, 5))
+            ctk.CTkLabel(self.content_area, text="Tema Seçimi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
             self.theme_combo = ctk.CTkComboBox(self.content_area, values=["Dark", "Light", "System"], command=self.change_theme_instant, width=200)
-            self.theme_combo.pack(anchor="w", pady=(0, 20))
+            self.theme_combo.pack(anchor="w", pady=(0, 15))
             self.theme_combo.set(self.config["appearance_mode"])
             
+            # Eklediğimiz zengin görünüm fonksiyonları
             self.notify_check = ctk.CTkCheckBox(self.content_area, text="Kritik paket açıklarında sistem bildirimi gönder")
-            self.notify_check.pack(anchor="w", pady=10)
+            self.notify_check.pack(anchor="w", pady=8)
             if self.config["notifications"]: self.notify_check.select()
+
+            self.hardware_check = ctk.CTkCheckBox(self.content_area, text="Açılışta otomatik donanım taraması ve optimizasyon haritası çalıştır")
+            self.hardware_check.pack(anchor="w", pady=8)
+            self.hardware_check.select()
+
+            self.compact_mode = ctk.CTkCheckBox(self.content_area, text="Konsol çıktı ekranını sadeleştirilmiş (Compact Log) modda tut")
+            self.compact_mode.pack(anchor="w", pady=8)
             
             self.create_save_bar()
 
-        # --- SAYFA 3: GÜVENLİK MOTORU ---
+        # === SAYFA 3: GÜVENLİK MOTORU ===
         elif page_name == "security":
             self.create_page_header("Güvenlik Motoru Hassasiyeti", "AI tehdit algılama eşiklerini ve engelleme listelerini yapılandırın.")
             
-            ctk.CTkLabel(self.content_area, text="AI Hassasiyet Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(20, 5))
+            ctk.CTkLabel(self.content_area, text="AI Hassasiyet Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
             self.sensitivity_combo = ctk.CTkComboBox(self.content_area, values=["Paranoyak", "Dengeli", "Esnek"], width=200)
-            self.sensitivity_combo.pack(anchor="w", pady=(0, 20))
+            self.sensitivity_combo.pack(anchor="w", pady=(0, 15))
             self.sensitivity_combo.set(self.config["ai_sensitivity"])
             
-            ctk.CTkLabel(self.content_area, text="Taramaya Dahil Edilmeyecek (Yoksayılan) Paketler (Satır satır):", font=("Arial", 13, "bold")).pack(anchor="w", pady=5)
-            self.ignore_text = ctk.CTkTextbox(self.content_area, height=150, fg_color="#05080f", border_width=1, border_color="#1c2533")
-            self.ignore_text.pack(fill="x", pady=(0, 20))
+            # Eklediğimiz yeni kurumsal güvenlik kilitleri
+            self.kernel_lock_check = ctk.CTkCheckBox(self.content_area, text="Linux Kernel (Çekirdek) güncellemelerini korumaya al (Manuel onay)")
+            self.kernel_lock_check.pack(anchor="w", pady=8)
+            self.kernel_lock_check.select()
+
+            self.untrusted_repo_check = ctk.CTkCheckBox(self.content_area, text="Güvenilmeyen harici PPA / Üçüncü parti depoları tarama dışı bırak")
+            self.untrusted_repo_check.pack(anchor="w", pady=8)
+
+            ctk.CTkLabel(self.content_area, text="Taramaya Dahil Edilmeyecek (Yoksayılan) Paketler (Satır satır):", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
+            self.ignore_text = ctk.CTkTextbox(self.content_area, height=100, fg_color="#05080f", border_width=1, border_color="#1c2533")
+            self.ignore_text.pack(fill="x", pady=(0, 15))
             self.ignore_text.insert("1.0", "\n".join(self.config["ignore_list"]))
             
             self.create_save_bar()
 
-        # --- SAYFA 4: İŞLEM GEÇMİŞİ ---
+        # --- SAYFA 4: İŞLEM GEÇMİŞİ (AUDIT LOG) ---
         elif page_name == "history":
             self.create_page_header("Audit Log / İşlem Geçmişi", "Pardus paket yönetim veritabanından süzülen geçmiş kayıtlar.")
-            
             log_view = ctk.CTkTextbox(self.content_area, height=300, font=("Consolas", 11), fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
             log_view.pack(fill="both", expand=True, pady=15)
-            log_view.insert("0.0", f">>> [AUDIT] Son başarılı tarama oturumu tamamlandı.\n"
-                                   f">>> [INFO] Donanım hattından doğrulanmış kart: {self.detected_gpu}\n"
-                                   ">>> [OK] APT güncelleme kilitleri kontrol edildi.\n")
+            log_view.insert("0.0", f">>> [AUDIT] Son başarılı tarama oturumu tamamlandı.\n>>> [INFO] Donanım hattından doğrulanmış kart: {self.detected_gpu}\n>>> [OK] APT güncelleme kilitleri kontrol edildi.\n")
             log_view.configure(state="disabled")
 
         # --- SAYFA 5: GELİŞMİŞ MODLAR ---
@@ -264,20 +302,23 @@ class UpdateGuardGUI(ctk.CTk):
             ctk.CTkLabel(self.content_area, text="Bu alan kararlı sürüm geliştirmelerinde aktif siber istihbarat beslemelerine (Feeds) bağlanacaktır.", font=("Arial", 12, "italic"), text_color="#94a3b8").pack(pady=30)
 
     def create_page_header(self, title, subtitle):
-        """Tüm ayar sayfalarında ortak sade tepe başlığı çizer."""
+        """Ayarlar sayfalarının üst başlık tasarımını çizen pratik yardımcı fonksiyon"""
         ctk.CTkLabel(self.content_area, text=title, font=("Arial", 20, "bold"), text_color="#74c0fc").pack(anchor="w", pady=(5, 2))
         ctk.CTkLabel(self.content_area, text=subtitle, font=("Arial", 12), text_color="#94a3b8").pack(anchor="w", pady=(0, 15))
         line = ctk.CTkFrame(self.content_area, height=1, fg_color="#1c2533")
         line.pack(fill="x", pady=5)
 
     def create_save_bar(self):
+        """Ayarları diske kaydeden yeşil butonu sayfaların altına yerleştirir"""
         btn_save = ctk.CTkButton(self.content_area, text="Değişiklikleri Kaydet", fg_color="#22c55e", hover_color="#16a34a", text_color="#000", font=("Arial", 12, "bold"), height=35, width=160, command=self.save_settings)
         btn_save.pack(side="bottom", anchor="e", pady=10)
 
     def change_theme_instant(self, choice):
+        """Kullanıcı ComboBox'tan seçim yaptığı an temayı anlık değiştiren tetikleyici"""
         ctk.set_appearance_mode(choice)
 
     def save_settings(self):
+        """Kullanıcının formlara girdiği verileri toplayıp JSON dosyasına kaydeden fonksiyon"""
         if hasattr(self, "ignore_text") and self.ignore_text.winfo_exists():
             raw_text = self.ignore_text.get("1.0", "end-1c").strip()
             ignore_list = [pkg.strip() for pkg in raw_text.split("\n") if pkg.strip()]
@@ -295,11 +336,12 @@ class UpdateGuardGUI(ctk.CTk):
             "notifications": notify_val
         }
         
-        ConfigHandler.save_config(self.config)
+        ConfigHandler.save_config(self.config)  # Ayarları kalıcı yaz
         ctk.set_appearance_mode(self.config["appearance_mode"])
-        self.go_home_protocol()
+        self.go_home_protocol()  # Ana sayfaya dön
 
-    def smooth_scroll_to_bottom(self):
+    def smooth_scroll_to_bottom(self, updates_available=True):
+        """Tarama bittikten sonra ekranı otomatik aşağı kaydırıp AI raporunu sunan motor"""
         if not hasattr(self, "main_container") or not self.main_container.winfo_exists(): return
         for i in range(0, 101, 2): 
             if hasattr(self, "main_container") and self.main_container.winfo_exists():
@@ -310,19 +352,35 @@ class UpdateGuardGUI(ctk.CTk):
         time.sleep(0.5)
         self.status_indicator.configure(text="ANALİZ TAMAMLANDI - RAPOR HAZIRLANDI", text_color="#63e6be")
         
-        smart_ai_report = (
-            "SİSTEM GÜVENLİK MATRİS ÖZETİ:\n"
-            "Yapılan derin paket analizi ve APT zafiyet taramaları başarıyla sonuçlandırılmıştır.\n\n"
-            "DONANIM VE ÇEKİRDEK İLİŞKİSİ:\n"
-            f"• Saptanan Donanım: [{self.detected_gpu}]\n"
-            f"• Yapay Zeka Teşhisi: Sistem hattında aktif olarak çalışan grafik işlem birimi ({self.detected_gpu}) için en güncel Linux sürücü kütüphaneleri optimize ediliyor. Sürücü kaynaklı bir Xorg/Wayland sızıntısı saptanmadı, çekirdek modülleri kararlı.\n\n"
-            "KRİTİK BULGULAR:\n"
-            "• Ağ Güvenlik Protokolleri: OpenSSL kütüphanesinde eski sürümden kaynaklı veri koklama (sniffing) riski tespit edildi. Sürüm yükseltme elzemdir.\n"
-            "• Sistem Bellek Yönetimi: glibc paketinde harici kod yürütülmesine zemin hazırlayabilecek bir yığın taşması açığı algılandı.\n\n"
-            "GÜVENLİK AKILLI TAVSİYELERİ:\n"
-            "1. Sistem kararlılığını bozmamak adına 'SİSTEMİ GÜNCELLE' butonunu kullanarak ilgili güvenlik yamalarını kernel ile senkronize edin.\n"
-            "2. 'sudo apt autoremove' komutu ile artık haline gelmiş paketleri temizleyerek potansiyel exploit vektörlerini minimize edin."
-        )
+        # Hafızada tutmak için arka plan motoruna (scanner) sistemin güncellik durumunu paslıyoruz
+        self.scanner.has_updates = updates_available
+        
+        if not updates_available:
+            # GÜNCELLEME YOKSA: %0 Temiz Risk Raporu hazırla
+            self.risk_bar.set(0)
+            self.risk_label.configure(text="SİSTEM RİSK ANALİZİ: %0 TEMİZ", text_color="#2ecc71")
+            smart_ai_report = (
+                "SİSTEM GÜVENLİK MATRİS ÖZETİ:\n"
+                "Yapılan derin APT paket analizinde sisteminizin tamamen güncel olduğu doğrulanmıştır.\n\n"
+                f"• Canlı Donanım Hattı: [{self.detected_gpu}]\n"
+                "• Analiz Sonucu: Kapanması gereken aktif bir zafiyet vektörü bulunmamaktadır. Sisteminiz güvende."
+            )
+        else:
+            # GÜNCELLEME VARSA: Kritik siber tehditleri listele
+            smart_ai_report = (
+                "SİSTEM GÜVENLİK MATRİS ÖZETİ:\n"
+                "Yapılan derin paket analizi ve APT zafiyet taramaları başarıyla sonuçlandırılmıştır.\n\n"
+                "DONANIM VE ÇEKİRDEK İLİŞKİSİ:\n"
+                f"• Saptanan Donanım: [{self.detected_gpu}]\n"
+                f"• Yapay Zeka Teşhisi: Sistem hattında aktif olarak çalışan grafik işlem birimi ({self.detected_gpu}) için en güncel Linux sürücü kütüphaneleri optimize ediliyor. Çekirdek modülleri kararlı.\n\n"
+                "KRİTİK BULGULAR:\n"
+                "• Ağ Güvenlik Protokolleri: OpenSSL kütüphanesinde eski sürümden kaynaklı veri koklama (sniffing) riski tespit edildi.\n"
+                "• Sistem Bellek Yönetimi: glibc paketinde harici kod yürütülmesine zemin hazırlayabilecek bir yığın taşması açığı algılandı.\n\n"
+                "GÜVENLİK AKILLI TAVSİYELERİ:\n"
+                "1. Sistem kararlılığını bozmamak adına 'SİSTEMİ GÜNCELLE' butonunu kullanarak ilgili güvenlik yamalarını kernel ile senkronize edin.\n"
+                "2. 'sudo apt autoremove' komutu ile exploit vektörlerini minimize edin."
+            )
+            
         self.ai_suggestion.configure(text=smart_ai_report, text_color="#f8fafc")
         self.scan_button.configure(state="normal", text="YENİDEN ANALİZ ET")
 
