@@ -61,3 +61,11 @@ pip3 install customtkinter
 
 Proje klasörüne gidin ve ana arayüz dosyasını tetikleyin:
 
+```bash
+python3 main_gui.py
+```
+---
+
+## 📄 Lisans
+
+Bu proje **GNU GPLv3** lisansı altında korunmaktadır. Kaynak kodları açık olup, geliştirilmeye ve yerli işletim sistemi ekosistemine katkı sunmaya tamamen müsaittir.
