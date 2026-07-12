@@ -36,25 +36,12 @@ $$RS = \min(W_{core} + W_{version} + W_{size}, 100)$$
 
 ---
 
-## 🛠️ Proje Klasör Mimarisi
-
-Proje, yazılım mühendisliği standartlarına uygun olarak modüler (MVC benzeri) bir katman yapısında tasarlanmıştır:
-
-```text
-📂 Pardus_UpdateGuard/
-├── 📄 main_gui.py        # Görsel Matris, Dinamik Sayfalama ve UX Katmanı
-├── 📄 scanner.py         # Çekirdek Algoritma, APT Entegrasyonu ve AI Raporlama
-├── 📄 config_handler.py  # JSON Tabanlı Kalıcı Bellek / Ayar Yönetici Katmanı
-├── 📄 config.json        # Kullanıcı ayarlarının saklandığı yerel veritabanı
-├── 📄 risks.json         # Bilinen zafiyet vektörleri imza tabanlı risk matrisi
-└── 🖼️ logo.png           # Uygulama ikon ve amblem görseli
-
-# 🛡️ Güvenlik ve Hata Toleransı (Fault Tolerance)
+## 🛡️ Güvenlik ve Hata Toleransı (Fault Tolerance)
 
 * **Veritabanı Koruma Çemberi:** `risks.json` veya `config.json` dosyaları silinirse kod çökmez; çalışma zamanında (Runtime) hafızada sanal bir bellek oluşturarak kesintisiz çalışmaya devam eder.
-* **Grafiksel Yetki İstemi (pkexec):** Sistem güncellenirken terminal tabanlı güvensiz `sudo` yerine, Linux standartlarında grafiksel şifre sorma mimarisi (`policykit`) tetiklenir.
+* **Grafiksel Yetki İstemi (`pkexec`):** Sistem güncellenirken terminal tabanlı güvensiz `sudo` yerine, Linux standartlarında grafiksel şifre sorma mimarisi (`policykit`) tetiklenir.
 * **Önbellek Kilit Koruması:** Tarama ve kurulum esnasında kritik butonlar geçici olarak dondurularak kullanıcının APT önbelleğini (`/var/lib/dpkg/lock`) kilitlemesi engellenir.
-* **Akıllı Kurulum Kontrolü:** Sistemde güncellenecek paket yoksa veya tarama yapılmadıysa, **"SİSTEMİ GÜNCELLE"** butonu terminal komut hatlarına inmeyerek işlemi güvenli bir uyarıyla sonlandırır.
+* **Akıllı Kurulum Kontrolü:** Sistemde güncellenecek paket yoksa veya tarama yapılmadıysa, "SİSTEMİ GÜNCELLE" butonu terminal komut hatlarına inmeyerek işlemi güvenli bir uyarıyla sonlandırır.
 
 ---
 
