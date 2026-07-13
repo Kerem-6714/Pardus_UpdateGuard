@@ -1,4 +1,4 @@
-# 🛡️ Pardus UpdateGuard (v1.2)
+# Pardus UpdateGuard (v1.2)
 
 Pardus UpdateGuard; Linux tabanlı yerli işletim sistemimiz **Pardus** (ve tüm Debian türevleri) için özel olarak geliştirilmiş, siber güvenlik odaklı ve **Yapay Zeka Destekli Sezgisel Analiz Motoruna (Heuristic Inference Engine)** sahip bir paket tarama, risk analiz ve güvenli güncelleme otomasyon yazılımıdır.
 
@@ -6,7 +6,7 @@ Geleneksel paket yöneticileri (`apt`, Synaptic vb.) sistemdeki güncellemeleri 
 
 ---
 
-## 🚀 Öne Çıkan Özellikler
+## Öne Çıkan Özellikler
 
 * **Evrensel Masaüstü & Sürüm Uyumluluğu:** Pardus'un tüm sürümleriyle (Pardus 21, 23, 26 vb.) ve tüm masaüstü ortamlarıyla (XFCE, GNOME) %100 uyumludur.
 * **Modern Siber Arayüz:** `CustomTkinter` kütüphanesi kullanılarak Pardus 26 arayüz standartlarına (1020x740) uygun, donanım hızlandırmalı modern ve göz yormayan Koyu Siber Tema tasarımı.
@@ -16,7 +16,7 @@ Geleneksel paket yöneticileri (`apt`, Synaptic vb.) sistemdeki güncellemeleri 
 
 ---
 
-## 🧠 Siber Güvenlik Altyapısı ve Risk Algoritması
+## Siber Güvenlik Altyapısı ve Risk Algoritması
 
 UpdateGuard, statik imza kontrolü ile dinamik sezgisel analizi birleştiren **Hibrit Siber Tehdit Analiz Altyapısı** üzerine kurulmuştur. Yazılım, risk analizi için **Ağırlıklı Sezgisel Çıkarım Algoritması (Weighted Heuristic Inference Algorithm)** kullanır.
 
@@ -36,7 +36,7 @@ $$RS = \min(W_{core} + W_{version} + W_{size}, 100)$$
 
 ---
 
-## 🛡️ Güvenlik ve Hata Toleransı (Fault Tolerance)
+## Güvenlik ve Hata Toleransı (Fault Tolerance)
 
 * **Veritabanı Koruma Çemberi:** `risks.json` veya `config.json` dosyaları silinirse kod çökmez; çalışma zamanında (Runtime) hafızada sanal bir bellek oluşturarak kesintisiz çalışmaya devam eder.
 * **Grafiksel Yetki İstemi (`pkexec`):** Sistem güncellenirken terminal tabanlı güvensiz `sudo` yerine, Linux standartlarında grafiksel şifre sorma mimarisi (`policykit`) tetiklenir.
@@ -45,7 +45,7 @@ $$RS = \min(W_{core} + W_{version} + W_{size}, 100)$$
 
 ---
 
-## 💻 Kurulum ve Çalıştırma
+## Kurulum ve Çalıştırma
 
 ### Gereksinimler
 Sistemin çalışabilmesi için Pardus/Linux ortamında Python3 ve gerekli kütüphanelerin yüklü olması gerekir:
@@ -66,6 +66,6 @@ python3 main_gui.py
 ```
 ---
 
-## 📄 Lisans
+## Lisans
 
 Bu proje **GNU GPLv3** lisansı altında korunmaktadır. Kaynak kodları açık olup, geliştirilmeye ve yerli işletim sistemi ekosistemine katkı sunmaya tamamen müsaittir.
