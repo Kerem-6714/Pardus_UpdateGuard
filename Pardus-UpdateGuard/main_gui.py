@@ -258,7 +258,7 @@ class UpdateGuardGUI(ctk.CTk):
                 self.autoclean_switch.pack(anchor="w", pady=8)
                 if self.config.get("auto_clean", False): self.autoclean_switch.select()
 
-                ctk.CTkLabel(self.page_app_frame, text="📊 Çıktı Kayıt (Log) Detay Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(15, 5))
+                ctk.CTkLabel(self.page_app_frame, text="Çıktı Kayıt (Log) Detay Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(15, 5))
                 self.log_level_combo = ctk.CTkComboBox(self.page_app_frame, values=["Standart", "Hata Odaklı (Error)", "Tam Hata Ayıklama (Debug)"], width=230)
                 self.log_level_combo.pack(anchor="w", pady=(0, 15))
                 self.log_level_combo.set(self.config.get("log_level", "Standart"))
