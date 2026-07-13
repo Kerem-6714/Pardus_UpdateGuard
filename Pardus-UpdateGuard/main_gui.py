@@ -23,7 +23,7 @@ class UpdateGuardGUI(ctk.CTk):
         
         # Daha önce kaydedilmiş olan ayarları (Tema vb.) yükliyoruz
         self.config = ConfigHandler.load_config()
-        ctk.set_appearance_mode(self.config["appearance_mode"])  # Dark veya Light modu uygula
+        ctk.set_appearance_mode(self.config.get("appearance_mode", "Dark"))  # Tamamen Koyu siber temaya kilitlenebilir, varsayılan Dark
         self.configure(fg_color="#0a0f18")  # Ana pencere arka plan rengi (Koyu Siber Lacivert)
 
         # Kodun çalıştığı klasörün yolunu bulup 'logo.png' dosyasının yerini tespit ediyoruz
@@ -162,144 +162,171 @@ class UpdateGuardGUI(ctk.CTk):
             self.lbl_live_remaining.configure(text=f"KALAN BOYUT: {remaining}")
 
     def show_page(self, page_name):
-        """Sayfa geçişlerini yöneten, eski sayfayı silip yenisini çizen dev mimari"""
+        """Sayfaları silmek yerine gizleyerek Python 3.14 çökmesini engelleyen güvenli mekanizma"""
         if self.current_page == page_name:
             return
         self.current_page = page_name
         self.update_navigation_highlight(page_name)
 
-        # Sağ paneldeki eski widgetları (görselleri/yazıları) temizle
-        for widget in self.content_area.winfo_children():
-            widget.destroy()
+        # 1. Adım: Hafızada daha önce oluşturulmuş tüm sayfaları ekrandan gizle (Silme yok!)
+        if hasattr(self, "page_scan_frame"): self.page_scan_frame.pack_forget()
+        if hasattr(self, "page_app_frame"): self.page_app_frame.pack_forget()
+        if hasattr(self, "page_sec_frame"): self.page_sec_frame.pack_forget()
+        if hasattr(self, "page_hist_frame"): self.page_hist_frame.pack_forget()
+        if hasattr(self, "page_adv_frame"): self.page_adv_frame.pack_forget()
 
         # === SAYFA 1: SİSTEM TARAMA MOTORU (ANA SAYFA) ===
         if page_name == "scan":
-            # İçeriğin aşağı kaydırılabilmesi için ScrollableFrame (Kaydırılabilir Panel) kullanıyoruz
-            self.main_container = ctk.CTkScrollableFrame(self.content_area, fg_color="transparent")
-            self.main_container.pack(fill="both", expand=True)
+            if not hasattr(self, "page_scan_frame"):
+                self.page_scan_frame = ctk.CTkScrollableFrame(self.content_area, fg_color="transparent")
+                
+                if os.path.exists(self.logo_path):
+                    self.logo_image = ctk.CTkImage(light_image=Image.open(self.logo_path), dark_image=Image.open(self.logo_path), size=(140, 140))
+                    self.logo_label = ctk.CTkLabel(self.page_scan_frame, image=self.logo_image, text="")
+                    self.logo_label.pack(pady=(10, 5))
 
-            # Logo varsa ekrana büyükçe yerleştir
-            if os.path.exists(self.logo_path):
-                self.logo_image = ctk.CTkImage(light_image=Image.open(self.logo_path), dark_image=Image.open(self.logo_path), size=(140, 140))
-                self.logo_label = ctk.CTkLabel(self.main_container, image=self.logo_image, text="")
-                self.logo_label.pack(pady=(10, 5))
+                self.title_label = ctk.CTkLabel(self.page_scan_frame, text="PARDUS UPDATEGUARD", font=("Orbitron", 24, "bold"), text_color="#e0e0e0")
+                self.title_label.pack()
+                
+                self.status_indicator = ctk.CTkLabel(self.page_scan_frame, text="SİSTEM TARAMA PROTOKOLÜNE HAZIR", text_color="#5c7cfa", font=("Arial", 12, "bold"))
+                self.status_indicator.pack(pady=(0, 10))
 
-            self.title_label = ctk.CTkLabel(self.main_container, text="PARDUS UPDATEGUARD", font=("Orbitron", 24, "bold"), text_color="#e0e0e0")
-            self.title_label.pack()
+                self.console = ctk.CTkTextbox(self.page_scan_frame, width=680, height=180, font=("Consolas", 11), fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
+                self.console.pack(padx=20, pady=5)
+                self.console.insert("0.0", f">>> UpdateGuard AI Motoru Aktif.\n>>> Canlı Donanım Denetimi: {self.detected_gpu}\n>>> Sistem analiz protokolü hazır.\n")
+
+                self.live_stats_frame = ctk.CTkFrame(self.page_scan_frame, fg_color="transparent")
+                self.live_stats_frame.pack(fill="x", padx=40, pady=(5, 0))
+                
+                self.lbl_live_speed = ctk.CTkLabel(self.live_stats_frame, text="İNDİRME HIZI: 0.0 MB/s", font=("Consolas", 12, "bold"), text_color="#22c55e")
+                self.lbl_live_speed.pack(side="left")
+                
+                self.lbl_live_remaining = ctk.CTkLabel(self.live_stats_frame, text="KALAN BOYUT: 0.0 MB", font=("Consolas", 12, "bold"), text_color="#3498db")
+                self.lbl_live_remaining.pack(side="right")
+
+                self.progress_bar = ctk.CTkProgressBar(self.page_scan_frame, width=620, progress_color="#4dabf7", fg_color="#1c2533")
+                self.progress_bar.set(0)
+                self.progress_bar.pack(pady=10)
+
+                self.button_frame = ctk.CTkFrame(self.page_scan_frame, fg_color="transparent")
+                self.button_frame.pack(pady=5)
+
+                self.scan_button = ctk.CTkButton(self.button_frame, text="ANALİZİ BAŞLAT", command=self.scanner.start_scan_thread, width=190, height=44, font=("Arial", 14, "bold"), fg_color="#1c2533", hover_color="#2e3b4e", border_width=1, border_color="#3b4b61")
+                self.scan_button.grid(row=0, column=0, padx=10)
+
+                self.upgrade_button = ctk.CTkButton(self.button_frame, text="SİSTEMİ GÜNCELLE", command=self.scanner.start_upgrade_thread, width=190, height=44, font=("Arial", 13, "bold"), fg_color="#1e3a2f", hover_color="#27ae60", text_color="#63e6be", border_width=1, border_color="#2ecc71")
+                self.upgrade_button.grid(row=0, column=1, padx=10)
+
+                self.risk_frame = ctk.CTkFrame(self.page_scan_frame, fg_color="#0d1421", border_width=1, border_color="#1c2533")
+                self.risk_frame.pack(fill="x", padx=20, pady=(10, 0))
+                self.risk_label = ctk.CTkLabel(self.risk_frame, text="SİSTEM RİSK ANALİZİ: BEKLENİYOR", font=("Arial", 12, "bold"), text_color="#e0e0e0")
+                self.risk_label.pack(side="top", anchor="w", padx=15, pady=(8, 3))
+                
+                self.risk_bar = ctk.CTkProgressBar(self.risk_frame, height=10)
+                self.risk_bar.set(0)
+                self.risk_bar.pack(fill="x", padx=15, pady=(0, 12))
+                self.risk_bar.configure(progress_color="#2ecc71")
+
+                self.ai_frame = ctk.CTkFrame(self.page_scan_frame, fg_color="#0d1421", border_width=1, border_color="#1c2533")
+                self.ai_frame.pack(padx=20, pady=15, fill="x")
+                self.ai_title = ctk.CTkLabel(self.ai_frame, text="🛡️ AI GÜVENLİK ANALİZ RAPORU", font=("Arial", 13, "bold"), text_color="#74c0fc")
+                self.ai_title.pack(pady=(10, 5))
+                
+                self.ai_suggestion = ctk.CTkLabel(self.ai_frame, text="Sistem analizi sonrası detaylı rapor burada oluşturulacaktır...", font=("Arial", 12), text_color="#94a3b8", wraplength=640, justify="left")
+                self.ai_suggestion.pack(pady=(0, 15), padx=20)
             
-            self.status_indicator = ctk.CTkLabel(self.main_container, text="SİSTEM TARAMA PROTOKOLÜNE HAZIR", text_color="#5c7cfa", font=("Arial", 12, "bold"))
-            self.status_indicator.pack(pady=(0, 10))
-
-            # Terminal Konsol Ekranı (Mavi yazılı siber çıktı paneli)
-            self.console = ctk.CTkTextbox(self.main_container, width=680, height=180, font=("Consolas", 11), fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
-            self.console.pack(padx=20, pady=5)
-            self.console.insert("0.0", f">>> UpdateGuard AI Motoru Aktif.\n>>> Canlı Donanım Denetimi: {self.detected_gpu}\n>>> Sistem analiz protokolü hazır.\n")
-
-            # Hız ve boyut bilgisi paneli
-            self.live_stats_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
-            self.live_stats_frame.pack(fill="x", padx=40, pady=(5, 0))
-            
-            self.lbl_live_speed = ctk.CTkLabel(self.live_stats_frame, text="İNDİRME HIZI: 0.0 MB/s", font=("Consolas", 12, "bold"), text_color="#22c55e")
-            self.lbl_live_speed.pack(side="left")
-            
-            self.lbl_live_remaining = ctk.CTkLabel(self.live_stats_frame, text="KALAN BOYUT: 0.0 MB", font=("Consolas", 12, "bold"), text_color="#3498db")
-            self.lbl_live_remaining.pack(side="right")
-
-            # Ana ilerleme yükleme çubuğu (Progress Bar)
-            self.progress_bar = ctk.CTkProgressBar(self.main_container, width=620, progress_color="#4dabf7", fg_color="#1c2533")
-            self.progress_bar.set(0)
-            self.progress_bar.pack(pady=10)
-
-            # Butonların yan yana durması için alt çerçeve
-            self.button_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
-            self.button_frame.pack(pady=5)
-
-            self.scan_button = ctk.CTkButton(self.button_frame, text="ANALİZİ BAŞLAT", command=self.scanner.start_scan_thread, width=190, height=44, font=("Arial", 14, "bold"), fg_color="#1c2533", hover_color="#2e3b4e", border_width=1, border_color="#3b4b61")
-            self.scan_button.grid(row=0, column=0, padx=10)
-
-            # İstediğin gibi: Bu buton artık hep aktif, basınca duruma göre tepki verecek
-            self.upgrade_button = ctk.CTkButton(self.button_frame, text="SİSTEMİ GÜNCELLE", command=self.scanner.start_upgrade_thread, width=190, height=44, font=("Arial", 13, "bold"), fg_color="#1e3a2f", hover_color="#27ae60", text_color="#63e6be", border_width=1, border_color="#2ecc71")
-            self.upgrade_button.grid(row=0, column=1, padx=10)
-
-            # Siber Risk Matrisi Paneli (Yeşil/Kırmızı İlerleme Çubuğu)
-            self.risk_frame = ctk.CTkFrame(self.main_container, fg_color="#0d1421", border_width=1, border_color="#1c2533")
-            self.risk_frame.pack(fill="x", padx=20, pady=(10, 0))
-            self.risk_label = ctk.CTkLabel(self.risk_frame, text="SİSTEM RİSK ANALİZİ: BEKLENİYOR", font=("Arial", 12, "bold"), text_color="#e0e0e0")
-            self.risk_label.pack(side="top", anchor="w", padx=15, pady=(8, 3))
-            
-            self.risk_bar = ctk.CTkProgressBar(self.risk_frame, height=10)
-            self.risk_bar.set(0)
-            self.risk_bar.pack(fill="x", padx=15, pady=(0, 12))
-            self.risk_bar.configure(progress_color="#2ecc71")
-
-            # Yapay Zeka Güvenlik Rapor Kutusu (Büyük Rapor Çerçevesi)
-            self.ai_frame = ctk.CTkFrame(self.main_container, fg_color="#0d1421", border_width=1, border_color="#1c2533")
-            self.ai_frame.pack(padx=20, pady=15, fill="x")
-            self.ai_title = ctk.CTkLabel(self.ai_frame, text="🛡️ AI GÜVENLİK ANALİZ RAPORU", font=("Arial", 13, "bold"), text_color="#74c0fc")
-            self.ai_title.pack(pady=(10, 5))
-            
-            self.ai_suggestion = ctk.CTkLabel(self.ai_frame, text="Sistem analizi sonrası detaylı rapor burada oluşturulacaktır...", font=("Arial", 12), text_color="#94a3b8", wraplength=640, justify="left")
-            self.ai_suggestion.pack(pady=(0, 15), padx=20)
+            self.page_scan_frame.pack(fill="both", expand=True)
 
         # === SAYFA 2: GÖRÜNÜM AYARI ===
         elif page_name == "appearance":
-            self.create_page_header("Görünüm Yapılandırması", "Arayüz temalarını ve görsel bildirim politikalarını esnetin.")
-            
-            ctk.CTkLabel(self.content_area, text="Tema Seçimi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
-            self.theme_combo = ctk.CTkComboBox(self.content_area, values=["Dark", "Light", "System"], command=self.change_theme_instant, width=200)
-            self.theme_combo.pack(anchor="w", pady=(0, 15))
-            self.theme_combo.set(self.config["appearance_mode"])
-            
-            # Eklediğimiz zengin görünüm fonksiyonları
-            self.notify_check = ctk.CTkCheckBox(self.content_area, text="Kritik paket açıklarında sistem bildirimi gönder")
-            self.notify_check.pack(anchor="w", pady=8)
-            if self.config["notifications"]: self.notify_check.select()
+            if not hasattr(self, "page_app_frame"):
+                self.page_app_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
+                
+                ctk.CTkLabel(self.page_app_frame, text="Görünüm Yapılandırması", font=("Arial", 20, "bold"), text_color="#74c0fc").pack(anchor="w", pady=(5, 2))
+                ctk.CTkLabel(self.page_app_frame, text="Arayüz politikalarını ve gelişmiş operasyon parametrelerini yönetin.", font=("Arial", 12), text_color="#94a3b8").pack(anchor="w", pady=(0, 15))
+                ctk.CTkFrame(self.page_app_frame, height=1, fg_color="#1c2533").pack(fill="x", pady=5)
+                
+                self.notify_check = ctk.CTkCheckBox(self.page_app_frame, text="Kritik paket açıklarında sistem bildirimi gönder", fg_color="#22c55e")
+                self.notify_check.pack(anchor="w", pady=8)
+                if self.config.get("notifications", True): self.notify_check.select()
 
-            self.hardware_check = ctk.CTkCheckBox(self.content_area, text="Açılışta otomatik donanım taraması ve optimizasyon haritası çalıştır")
-            self.hardware_check.pack(anchor="w", pady=8)
-            self.hardware_check.select()
+                self.hardware_check = ctk.CTkCheckBox(self.page_app_frame, text="Açılışta otomatik donanım taraması ve optimizasyon haritası çalıştır", fg_color="#22c55e")
+                self.hardware_check.pack(anchor="w", pady=8)
+                self.hardware_check.select()
 
-            self.compact_mode = ctk.CTkCheckBox(self.content_area, text="Konsol çıktı ekranını sadeleştirilmiş (Compact Log) modda tut")
-            self.compact_mode.pack(anchor="w", pady=8)
-            
-            self.create_save_bar()
+                self.autoclean_switch = ctk.CTkSwitch(self.page_app_frame, text="Güncelleme sonrası eski paket önbelleğini otomatik temizle (autoremove)", progress_color="#22c55e")
+                self.autoclean_switch.pack(anchor="w", pady=8)
+                if self.config.get("auto_clean", False): self.autoclean_switch.select()
+
+                ctk.CTkLabel(self.page_app_frame, text="📊 Çıktı Kayıt (Log) Detay Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(15, 5))
+                self.log_level_combo = ctk.CTkComboBox(self.page_app_frame, values=["Standart", "Hata Odaklı (Error)", "Tam Hata Ayıklama (Debug)"], width=230)
+                self.log_level_combo.pack(anchor="w", pady=(0, 15))
+                self.log_level_combo.set(self.config.get("log_level", "Standart"))
+                
+                btn_save = ctk.CTkButton(self.page_app_frame, text="Değişiklikleri Kaydet", fg_color="#22c55e", hover_color="#16a34a", text_color="#000", font=("Arial", 12, "bold"), height=35, width=160, command=self.save_settings)
+                btn_save.pack(side="bottom", anchor="e", pady=10)
+                
+            self.page_app_frame.pack(fill="both", expand=True)
 
         # === SAYFA 3: GÜVENLİK MOTORU ===
         elif page_name == "security":
-            self.create_page_header("Güvenlik Motoru Hassasiyeti", "AI tehdit algılama eşiklerini ve engelleme listelerini yapılandırın.")
-            
-            ctk.CTkLabel(self.content_area, text="AI Hassasiyet Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
-            self.sensitivity_combo = ctk.CTkComboBox(self.content_area, values=["Paranoyak", "Dengeli", "Esnek"], width=200)
-            self.sensitivity_combo.pack(anchor="w", pady=(0, 15))
-            self.sensitivity_combo.set(self.config["ai_sensitivity"])
-            
-            # Eklediğimiz yeni kurumsal güvenlik kilitleri
-            self.kernel_lock_check = ctk.CTkCheckBox(self.content_area, text="Linux Kernel (Çekirdek) güncellemelerini korumaya al (Manuel onay)")
-            self.kernel_lock_check.pack(anchor="w", pady=8)
-            self.kernel_lock_check.select()
+            if not hasattr(self, "page_sec_frame"):
+                self.page_sec_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
+                
+                ctk.CTkLabel(self.page_sec_frame, text="Güvenlik Motoru Hassasiyeti", font=("Arial", 20, "bold"), text_color="#74c0fc").pack(anchor="w", pady=(5, 2))
+                ctk.CTkLabel(self.page_sec_frame, text="AI Tehdit algılama eşiklerini ve engelleme listelerini yapılandırın.", font=("Arial", 12), text_color="#94a3b8").pack(anchor="w", pady=(0, 15))
+                ctk.CTkFrame(self.page_sec_frame, height=1, fg_color="#1c2533").pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(self.page_sec_frame, text="AI Hassasiyet Seviyesi:", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
+                self.sensitivity_combo = ctk.CTkComboBox(self.page_sec_frame, values=["Paranoyak", "Dengeli", "Esnek"], width=200)
+                self.sensitivity_combo.pack(anchor="w", pady=(0, 15))
+                self.sensitivity_combo.set(self.config["ai_sensitivity"])
+                
+                self.kernel_lock_check = ctk.CTkCheckBox(self.page_sec_frame, text="Linux Kernel (Çekirdek) güncellemelerini korumaya al (Manuel onay)", fg_color="#22c55e")
+                self.kernel_lock_check.pack(anchor="w", pady=8)
+                self.kernel_lock_check.select()
 
-            self.untrusted_repo_check = ctk.CTkCheckBox(self.content_area, text="Güvenilmeyen harici PPA / Üçüncü parti depoları tarama dışı bırak")
-            self.untrusted_repo_check.pack(anchor="w", pady=8)
+                self.untrusted_repo_check = ctk.CTkCheckBox(self.page_sec_frame, text="Güvenilmeyen harici PPA / Üçüncü parti depoları tarama dışı bırak", fg_color="#22c55e")
+                self.untrusted_repo_check.pack(anchor="w", pady=8)
 
-            ctk.CTkLabel(self.content_area, text="Taramaya Dahil Edilmeyecek (Yoksayılan) Paketler (Satır satır):", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
-            self.ignore_text = ctk.CTkTextbox(self.content_area, height=100, fg_color="#05080f", border_width=1, border_color="#1c2533")
-            self.ignore_text.pack(fill="x", pady=(0, 15))
-            self.ignore_text.insert("1.0", "\n".join(self.config["ignore_list"]))
-            
-            self.create_save_bar()
+                ctk.CTkLabel(self.page_sec_frame, text="Taramaya Dahil Edilmeyecek (Yoksayılan) Paketler (Satır satır):", font=("Arial", 13, "bold")).pack(anchor="w", pady=(10, 5))
+                self.ignore_text = ctk.CTkTextbox(self.page_sec_frame, height=100, fg_color="#05080f", border_width=1, border_color="#1c2533")
+                self.ignore_text.pack(fill="x", pady=(0, 15))
+                self.ignore_text.insert("1.0", "\n".join(self.config["ignore_list"]))
+                
+                btn_save = ctk.CTkButton(self.page_sec_frame, text="Değişiklikleri Kaydet", fg_color="#22c55e", hover_color="#16a34a", text_color="#000", font=("Arial", 12, "bold"), height=35, width=160, command=self.save_settings)
+                btn_save.pack(side="bottom", anchor="e", pady=10)
+                
+            self.page_sec_frame.pack(fill="both", expand=True)
 
         # --- SAYFA 4: İŞLEM GEÇMİŞİ (AUDIT LOG) ---
         elif page_name == "history":
-            self.create_page_header("Audit Log / İşlem Geçmişi", "Pardus paket yönetim veritabanından süzülen geçmiş kayıtlar.")
-            log_view = ctk.CTkTextbox(self.content_area, height=300, font=("Consolas", 11), fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
-            log_view.pack(fill="both", expand=True, pady=15)
-            log_view.insert("0.0", f">>> [AUDIT] Son başarılı tarama oturumu tamamlandı.\n>>> [INFO] Donanım hattından doğrulanmış kart: {self.detected_gpu}\n>>> [OK] APT güncelleme kilitleri kontrol edildi.\n")
-            log_view.configure(state="disabled")
+            if not hasattr(self, "page_hist_frame"):
+                self.page_hist_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
+                
+                ctk.CTkLabel(self.page_hist_frame, text="Audit Log / İşlem Geçmişi", font=("Arial", 20, "bold"), text_color="#74c0fc").pack(anchor="w", pady=(5, 2))
+                ctk.CTkLabel(self.page_hist_frame, text="Pardus paket yönetim veritabanından süzülen geçmiş kayıtlar.", font=("Arial", 12), text_color="#94a3b8").pack(anchor="w", pady=(0, 15))
+                ctk.CTkFrame(self.page_hist_frame, height=1, fg_color="#1c2533").pack(fill="x", pady=5)
+                
+                log_view = ctk.CTkTextbox(self.page_hist_frame, height=300, font=("Consolas", 11), fg_color="#05080f", border_width=1, border_color="#1c2533", text_color="#a5b4fc")
+                log_view.pack(fill="both", expand=True, pady=15)
+                log_view.insert("0.0", f">>> [AUDIT] Son başarılı tarama oturumu tamamlandı.\n>>> [INFO] Donanım hattından doğrulanmış kart: {self.detected_gpu}\n>>> [OK] APT güncelleme kilitleri kontrol edildi.\n")
+                log_view.configure(state="disabled")
+                
+            self.page_hist_frame.pack(fill="both", expand=True)
 
         # --- SAYFA 5: GELİŞMİŞ MODLAR ---
         elif page_name == "advanced":
-            self.create_page_header("Gelişmiş Operasyonel Modlar", "Sistem adminleri için kernel seviyesi analiz parametreleri.")
-            ctk.CTkLabel(self.content_area, text="Bu alan kararlı sürüm geliştirmelerinde aktif siber istihbarat beslemelerine (Feeds) bağlanacaktır.", font=("Arial", 12, "italic"), text_color="#94a3b8").pack(pady=30)
+            if not hasattr(self, "page_adv_frame"):
+                self.page_adv_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
+                
+                ctk.CTkLabel(self.page_adv_frame, text="Gelişmiş Operasyonel Modlar", font=("Arial", 20, "bold"), text_color="#74c0fc").pack(anchor="w", pady=(5, 2))
+                ctk.CTkLabel(self.page_adv_frame, text="Sistem adminleri için kernel seviyesi analiz parametreleri.", font=("Arial", 12), text_color="#94a3b8").pack(anchor="w", pady=(0, 15))
+                ctk.CTkFrame(self.page_adv_frame, height=1, fg_color="#1c2533").pack(fill="x", pady=5)
+                
+                ctk.CTkLabel(self.page_adv_frame, text="Bu alan kararlı sürüm geliştirmelerinde aktif siber istihbarat beslemelerine (Feeds) bağlanacaktır.", font=("Arial", 12, "italic"), text_color="#94a3b8").pack(pady=30)
+                
+            self.page_adv_frame.pack(fill="both", expand=True)
 
     def create_page_header(self, title, subtitle):
         """Ayarlar sayfalarının üst başlık tasarımını çizen pratik yardımcı fonksiyon"""
@@ -313,10 +340,6 @@ class UpdateGuardGUI(ctk.CTk):
         btn_save = ctk.CTkButton(self.content_area, text="Değişiklikleri Kaydet", fg_color="#22c55e", hover_color="#16a34a", text_color="#000", font=("Arial", 12, "bold"), height=35, width=160, command=self.save_settings)
         btn_save.pack(side="bottom", anchor="e", pady=10)
 
-    def change_theme_instant(self, choice):
-        """Kullanıcı ComboBox'tan seçim yaptığı an temayı anlık değiştiren tetikleyici"""
-        ctk.set_appearance_mode(choice)
-
     def save_settings(self):
         """Kullanıcının formlara girdiği verileri toplayıp JSON dosyasına kaydeden fonksiyon"""
         if hasattr(self, "ignore_text") and self.ignore_text.winfo_exists():
@@ -325,19 +348,22 @@ class UpdateGuardGUI(ctk.CTk):
         else:
             ignore_list = self.config["ignore_list"]
             
-        theme_val = self.theme_combo.get() if hasattr(self, "theme_combo") and self.theme_combo.winfo_exists() else self.config["appearance_mode"]
         sens_val = self.sensitivity_combo.get() if hasattr(self, "sensitivity_combo") and self.sensitivity_combo.winfo_exists() else self.config["ai_sensitivity"]
         notify_val = bool(self.notify_check.get()) if hasattr(self, "notify_check") and self.notify_check.winfo_exists() else self.config["notifications"]
         
+        # YENİ ÖZELLİKLERİN VERİLERİNİ GÜVENLİCE OKUYORUZ
+        autoclean_val = bool(self.autoclean_switch.get()) if hasattr(self, "autoclean_switch") and self.autoclean_switch.winfo_exists() else self.config.get("auto_clean", False)
+        loglevel_val = self.log_level_combo.get() if hasattr(self, "log_level_combo") and self.log_level_combo.winfo_exists() else self.config.get("log_level", "Standart")
+
         self.config = {
-            "appearance_mode": theme_val,
             "ai_sensitivity": sens_val,
             "ignore_list": ignore_list,
-            "notifications": notify_val
+            "notifications": notify_val,
+            "auto_clean": autoclean_val,
+            "log_level": loglevel_val
         }
         
         ConfigHandler.save_config(self.config)  # Ayarları kalıcı yaz
-        ctk.set_appearance_mode(self.config["appearance_mode"])
         self.go_home_protocol()  # Ana sayfaya dön
 
     def smooth_scroll_to_bottom(self, updates_available=True):
