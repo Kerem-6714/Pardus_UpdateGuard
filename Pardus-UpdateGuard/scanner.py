@@ -212,13 +212,11 @@ class UpdateScanner:
     def upgrade_process(self):
         """Pardus terminalinde root şifresi isteyerek dist-upgrade komutunu yürüten ana operasyon."""
         
-        # İstediğin Harika UX Protokolü: Eğer sistemde güncellenecek paket yoksa indirmeyi başlatma, kullanıcıyı uyar!
         if not self.has_updates:
-            self.gui.console.insert("end", "\n\n>>> [BİLGİ] Güncelleme işlemi durduruldu: Sisteminiz zaten en güncel kararlı sürümde. Yeniden kurulacak bir paket bloğu bulunmuyor.\n")
+            self.gui.console.insert("end", "\n\n>>> [BİLGİ] Güncelleme işlemi durduruldu: Sisteminiz zaten en güncel kararlı sürümde.\n")
             self.gui.console.see("end")
-            return # Aşağıdaki terminal komut çalıştırma evresine hiç geçmeden kilitle!
+            return
 
-        # Eğer güncelleme varsa kuruluma başla
         self.gui.upgrade_button.configure(state="disabled", text="GÜNCELLENİYOR...")
         self.gui.scan_button.configure(state="disabled")
         
@@ -228,31 +226,50 @@ class UpdateScanner:
         self.gui.console.see("end")
 
         try:
-            # pkexec: Pardus grafik ekranında şifre sorma penceresi açar
-            # apt-get dist-upgrade -y: Onay istemeden tüm sistemi üst sürüme yükseltir
-            cmd = ["pkexec", "apt-get", "dist-upgrade", "-y"]
+            # DİL VE TERMİNAL KORUMASI: 
+            # DEBIAN_FRONTEND=noninteractive -> Ekrana soru/onay kutusu gelmesini engeller.
+            # APT_LISTCHANGES_FRONTEND=none -> Değişiklik listesi gösterip terminali durdurmasını engeller.
+            env = os.environ.copy()
+            env["LC_ALL"] = "C"
+            env["DEBIAN_FRONTEND"] = "noninteractive"
+            env["APT_LISTCHANGES_FRONTEND"] = "none"
             
-            # Çıktıları canlı okuyabilmek için alt süreci (Process) başlatıyoruz
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            # Güncellemeyi tamamen arka planda, konsol karakterlerini bozmadan düz metin olarak çalıştırıyoruz
+            cmd = ["pkexec", "apt-get", "-y", "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "dist-upgrade"]
             
-            # Terminalden gelen satırları canlı canlı bizim siber konsola aktarıyoruz
+            process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                env=env
+            )
+            
+            # Regex ile terminalin temiz kalmasını sağlıyoruz (ANSI kaçış dizilimlerini filtrele)
+            ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
             for line in process.stdout:
-               self.gui.console.insert("end", f"> {line}")
-               self.gui.console.see("end")
+                # Bozuk karakterleri temizle
+                clean_line = ansi_escape.sub('', line)
+                # Terminal ilerleme çubuğu satırlarını (ilerleme göstergelerini) süz
+                if any(x in clean_line for x in ["Progress:", "Preparing...", "Unpacking...", "Setting up..."]):
+                    self.gui.console.insert("end", f">>> [KURULUM] {clean_line.strip()}\n")
+                elif clean_line.strip():
+                    self.gui.console.insert("end", f"> {clean_line}")
+                
+                self.gui.console.see("end")
 
             process.wait()
 
-            # Komut başarıyla bittiyse (Return Code 0 ise)
             if process.returncode == 0:
-               self.gui.console.insert("end", "\n>>> [BAŞARILI] Sistem başarıyla güncellendi!\n")
-               self.gui.status_indicator.configure(text="SİSTEM GÜNCEL", text_color="#2ecc71")
-               self.has_updates = False # Güncelleme bittiği için durumu tekrar temiz hale çek
+                self.gui.console.insert("end", "\n>>> [BAŞARILI] Sistem başarıyla güncellendi!\n")
+                self.gui.status_indicator.configure(text="SİSTEM GÜNCEL", text_color="#2ecc71")
+                self.has_updates = False
             else:
-               self.gui.console.insert("end", "\n>>> [İPTAL/HATA] Güncelleme işlemi kullanıcı tarafından iptal edildi veya yarıda kaldı.\n")
+                self.gui.console.insert("end", f"\n>>> [İPTAL/HATA] Güncelleme tamamlanamadı. Kod: {process.returncode}\n")
 
         except Exception as e:
             self.gui.console.insert("end", f"\n[KRİTİK HATA] {e}\n")
         
-        # Operasyon bitince arayüz butonlarını eski hallerine güvenle döndür
         self.gui.upgrade_button.configure(state="normal", text="SİSTEMİ GÜNCELLE")
         self.gui.scan_button.configure(state="normal", text="YENİDEN TARA")
