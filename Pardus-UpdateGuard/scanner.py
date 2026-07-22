@@ -68,6 +68,8 @@ class UpdateScanner:
         self.gui.progress_bar.set(0)
         self.has_updates = False # Her yeni taramada durumu sıfırla
 
+        os.system("sudo apt-get update")
+
         try:
             # --- 1. ADIM: VERİ TOPLAMA (GARANTİLİ YÖNTEM) ---
             self.gui.console.insert("end", ">>> [SİSTEM] APT terminal bağlantısı kuruluyor...\n")
