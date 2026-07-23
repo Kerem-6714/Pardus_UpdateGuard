@@ -146,7 +146,8 @@ class UpdateScanner:
     def finalize_scan(self, updates):
         """Tarama bitiminde AI motor çıkarımlarını yapıp nihai raporu hazırlayan alan."""
         total_risk = 0
-        insight_report = "### 🧠 AI DERİN GÜVENLİK ANALİZ RAPORU\n\n"
+        # Diyez (###) işaretini kaldırdık, CustomTkinter için temiz başlık yaptık
+        insight_report = "🧠 AI DERİN GÜVENLİK ANALİZ RAPORU\n\n"
 
         if not updates:
             # Güncelleme yoksa yeşil temiz raporu bas
@@ -168,7 +169,8 @@ class UpdateScanner:
             
             # Risk puanı yüksek olan paketlerin zafiyet nedenlerini rapora ekle
             if p_score > 30: 
-                insight_report += f"📍 **{pkg_name.upper()}** (Risk Oranı: %{p_score})\n"
+                # Kalın yazı yıldızlarını (**) kaldırdık, düz ve temiz metin yaptık
+                insight_report += f"📍 {pkg_name.upper()} (Risk Oranı: %{p_score})\n"
                 for r in p_reasons:
                     insight_report += f"  - {r}\n"
                 insight_report += "\n"
