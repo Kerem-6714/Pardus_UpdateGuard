@@ -1,0 +1,17 @@
+{
+    "linux-image": {
+        "level": "KRİTİK",
+        "desc": "Sistem çekirdeği güncelleniyor. Boot (başlatma) ayarları değişebilir.",
+        "tip": "Güncelleme sonrası sistemi mutlaka yeniden başlatın."
+    },
+    "nvidia": {
+        "level": "YÜKSEK",
+        "desc": "Grafik sürücüsü güncelleniyor. Ekran çözünürlüğü geçici olarak etkilenebilir.",
+        "tip": "Açık olan grafik tabanlı uygulamaları (oyun, render) kapatın."
+    },
+    "libssl": {
+        "level": "KRİTİK",
+        "desc": "Güvenlik sertifikaları ve şifreleme kütüphanesi yenileniyor.",
+        "tip": "İnternet bankacılığı ve güvenli bağlantılar için bu güncellemeyi ihmal etmeyin."
+    }
+}
