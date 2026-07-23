@@ -47,15 +47,26 @@ $$RS = \min(W_{core} + W_{version} + W_{size}, 100)$$
 
 ## Kurulum ve Çalıştırma
 
+Modern Linux ve Pardus dağıtımlarındaki Python güvenlik politikaları (**PEP 668 - externally-managed-environment**) gereği, sistem paketlerinin zarar görmemesi adına uygulamanın bağımsız bir **Sanal Ortam (venv)** içinde kurulması ve çalıştırılması gerekmektedir.
+
 ### Gereksinimler
-Sistemin çalışabilmesi için Pardus/Linux ortamında Python3 ve gerekli kütüphanelerin yüklü olması gerekir:
+
+Sistemin çalışabilmesi için Pardus/Linux ortamında Python3 ve bağımlılıkların izole bir şekilde kurulması gerekir. Terminali açarak sırayla şu komutları yürütünüz:
 
 ```bash
+# 1. Pardus paket depolarını güncelleyin ve gerekli temel sistem kütüphanelerini kurun
 sudo apt update
-sudo apt install python3-pip python3-pil python3-pil.imagetk -y
-pip3 install customtkinter
+sudo apt install python3-pip python3-venv python3-pil python3-pil.imagetk -y
+
+# 2. Python sanal ortamını (Virtual Environment) oluşturun
+python3 -m venv venv
+
+# 3. Sanal ortamı aktif hale getirin (Terminalin başında '(venv)' ibaresi görünecektir)
+source venv/bin/activate
+
+# 4. Uygulamanın ihtiyaç duyduğu arayüz kütüphanelerini güvenli bir şekilde yükleyin
+pip install -r requirements.txt
 ```
----
 
 ## Çalıştırma
 
