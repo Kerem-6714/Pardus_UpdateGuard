@@ -144,20 +144,24 @@ class UpdateScanner:
         self.finalize_scan([])
 
     def finalize_scan(self, updates):
-        """Tarama bitiminde AI motor çıkarımlarını yapıp nihai raporu hazırlayan alan."""
+        """Tarama bitiminde AI motor çıkarımlarını yapıp kullanıcıya siber güvenlik önerileri hazırlayan alan."""
         total_risk = 0
-        # Diyez (###) işaretini kaldırdık, CustomTkinter için temiz başlık yaptık
-        insight_report = "🧠 AI DERİN GÜVENLİK ANALİZ RAPORU\n\n"
+        
+        # Tamamen kullanıcı odaklı, temiz bir başlık ve giriş
+        insight_report = "🧠 AI SİBER GÜVENLİK VE AKSİYON ÖNERİLERİ\n\n"
+        insight_report += "Sisteminizde tespit edilen güncellemeler doğrultusunda güvenliğinizi artırmak için aşağıdaki adımları uygulamanız önerilir:\n\n"
 
         if not updates:
-            # Güncelleme yoksa yeşil temiz raporu bas
-            self.update_ui_elements(0, "✨ AI ANALİZİ: Sistem matrisiniz %100 güncel ve kararlı durumda. Kapatılması gereken aktif bir zafiyet bulunmuyor.")
+            self.update_ui_elements(0, "✨ AI ANALİZİ: Sistem matrisiniz %100 güncel ve kararlı durumda. Kapatılması gereken aktif bir zafiyet bulunmuyor. Herhangi bir ek aksiyona gerek yoktur.")
             return
+
+        # Raporun şişmemesi ve daha net görünmesi için önerileri kategorize ediyoruz
+        has_core_risk = False
+        has_lib_risk = False
 
         for pkg in updates:
             pkg_name = pkg.split('/')[0]
             
-            # Gerçek verilerden beslenen detay şablonu
             mock_details = {
                 'name': pkg_name,
                 'old_ver': "1.0", 
@@ -165,18 +169,38 @@ class UpdateScanner:
                 'size': 150000000
             }
             
-            p_score, p_reasons = self.dynamic_inference(mock_details)
+            p_score, _ = self.dynamic_inference(mock_details)
             
-            # Risk puanı yüksek olan paketlerin zafiyet nedenlerini rapora ekle
-            if p_score > 30: 
-                # Kalın yazı yıldızlarını (**) kaldırdık, düz ve temiz metin yaptık
-                insight_report += f"📍 {pkg_name.upper()} (Risk Oranı: %{p_score})\n"
-                for r in p_reasons:
-                    insight_report += f"  - {r}\n"
-                insight_report += "\n"
-            
+            # Hangi tür risklerin olduğunu tespit ediyoruz
+            if p_score >= 60:
+                has_core_risk = True
+            elif p_score > 30:
+                has_lib_risk = True
+                
             if p_score > total_risk: 
                 total_risk = p_score
+
+        # --- DİNAMİK VE KULLANICIYA YÖNELİK ÖNERİ BLOĞU ---
+        
+        if has_core_risk:
+            insight_report += "🛡️ [KRİTİK ÖNERİ] Çekirdek ve Sistem Bileşenleri Güncellemesi:\n"
+            insight_report += "  - Sistem mimarisi (Kernel, Systemd, Udev) için kritik yamalar mevcut.\n"
+            insight_report += "  - Olası yetki yükseltme (Privilege Escalation) zafiyetlerini önlemek için bu paketleri ertelemeden yükleyin.\n"
+            insight_report += "  - Güncelleme tamamlandıktan sonra sistem bütünlüğü için bilgisayarınızı yeniden başlatmanız tavsiye edilir.\n\n"
+
+        if has_lib_risk:
+            insight_report += "📦 [SİSTEM ÖNERİSİ] Paylaşımlı Kütüphane Güncellemeleri:\n"
+            insight_report += "  - Uygulamaların kullandığı alt bağımlılık zincirlerinde (lib*) güncellemeler tespit edildi.\n"
+            insight_report += "  - Arka planda çalışan servislerin veri sızıntılarına yol açmasını engellemek adına 'Sistemi Güncelle' butonunu kullanın.\n\n"
+
+        # Genel Güvenlik Skoru Tavsiyesi
+        insight_report += "📊 NİHAİ AKSİYON PLANI:\n"
+        if total_risk >= 60:
+            insight_report += f"  - Mevcut Risk Skoru: %{total_risk} (YÜKSEK RİSK)\n"
+            insight_report += "  - Aksiyon: Lütfen açık olan tüm çalışmalarınızı kaydedin ve aşağıdaki 'SİSTEMİ GÜNCELLE' butonuna basarak tüm yamaları tek seferde uygulayın."
+        else:
+            insight_report += f"  - Mevcut Risk Skoru: %{total_risk} (DÜŞÜK/ORTA RİSK)\n"
+            insight_report += "  - Aksiyon: Sisteminizde acil bir siber tehdit bulunmuyor. Ancak kararlılık ve performans için güncellemeleri tamamlamanız önerilir."
 
         # Grafik arayüz bileşenlerini güncellemeye gönder
         self.update_ui_elements(total_risk, insight_report)
